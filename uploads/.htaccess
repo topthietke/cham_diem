@@ -1,0 +1,5 @@
+# Ngăn chặn thực thi mã PHP trong thư mục uploads (bảo mật)
+<FilesMatch "\.(php|phtml|php3|php4|php5|pl|py|cgi|asp|aspx)$">
+    Require all denied
+</FilesMatch>
+Options -Indexes

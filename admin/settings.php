@@ -1,162 +1,109 @@
 <?php
-require_once __DIR__ . '/../includes/functions.php';
 $pageTitle = 'Cài đặt chung';
-require_admin_login();
+require_once __DIR__ . '/includes/layout_head.php';
+
+$fields = [
+    'site_name'    => ['label' => 'Tên trường', 'type' => 'text'],
+    'hero_title'   => ['label' => 'Tiêu đề Hero (banner đầu trang)', 'type' => 'text'],
+    'hero_desc'    => ['label' => 'Mô tả Hero', 'type' => 'textarea'],
+    'hero_btn1'    => ['label' => 'Nút 1 (VD: Đăng ký tư vấn)', 'type' => 'text'],
+    'hero_btn2'    => ['label' => 'Nút 2 (VD: Tham quan trường)', 'type' => 'text'],
+    'about_label'  => ['label' => 'Nhãn mục Giới thiệu', 'type' => 'text'],
+    'about_title'  => ['label' => 'Tiêu đề Giới thiệu', 'type' => 'text'],
+    'about_desc'   => ['label' => 'Mô tả Giới thiệu', 'type' => 'textarea'],
+    'address'      => ['label' => 'Địa chỉ', 'type' => 'text'],
+    'phone'        => ['label' => 'Số điện thoại', 'type' => 'text'],
+    'email'        => ['label' => 'Email liên hệ (nhận đăng ký)', 'type' => 'text'],
+    'working_hours'=> ['label' => 'Giờ làm việc', 'type' => 'text'],
+    'facebook_url' => ['label' => 'Link Facebook', 'type' => 'text'],
+    'map_embed'    => ['label' => 'Mã nhúng Google Maps (iframe)', 'type' => 'textarea'],
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_check()) {
-        redirect_with_message('settings.php', 'danger', 'Phiên làm việc hết hạn, vui lòng thử lại.');
+    $stmt = $pdo->prepare("UPDATE settings SET value_vi = ?, value_en = ? WHERE setting_key = ?");
+    foreach ($fields as $key => $meta) {
+        $vi = $_POST[$key . '_vi'] ?? '';
+        $en = $_POST[$key . '_en'] ?? '';
+        $stmt->execute([$vi, $en, $key]);
     }
 
-    $fields = [
-        'site_name', 'site_slogan', 'hotline', 'email', 'address',
-        'fanpage_url', 'youtube_url', 'zalo_url', 'map_iframe',
-        'hero_title', 'hero_subtitle', 'hero_button_text',
-        'about_title', 'about_content',
-        'stat_students', 'stat_teachers', 'stat_years', 'stat_awards',
-        'footer_description',
-    ];
-
-    $stmt = $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
-                            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
-    foreach ($fields as $field) {
-        $stmt->execute([$field, trim($_POST[$field] ?? '')]);
-    }
-
-    // Xử lý upload ảnh (logo, hero, about)
-    $imageFields = ['logo' => 'logo', 'hero_image' => 'hero_image', 'about_image' => 'about_image'];
-    foreach ($imageFields as $inputName => $settingKey) {
-        $uploaded = handle_upload($inputName, 'settings');
+    // Ảnh hero / about
+    foreach (['hero_image' => 'banner', 'about_image' => 'banner'] as $imgKey => $folder) {
+        $uploaded = upload_image($imgKey, $folder);
         if ($uploaded) {
-            $stmt->execute([$settingKey, $uploaded]);
+            $u = $pdo->prepare("UPDATE settings SET value_vi = ?, value_en = ? WHERE setting_key = ?");
+            $u->execute([$uploaded, $uploaded, $imgKey]);
         }
     }
 
-    redirect_with_message('settings.php', 'success', 'Đã lưu cài đặt thành công!');
+    flash_set('Đã cập nhật cài đặt thành công.');
+    redirect('settings.php');
 }
 
 $settings = get_settings($pdo);
-include __DIR__ . '/includes/admin_header.php';
 ?>
 
-<form method="POST" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+<form method="POST" enctype="multipart/form-data" class="a-card">
+  <ul class="nav nav-pills mb-4" id="langTabs">
+    <li class="nav-item"><button type="button" class="btn btn-admin-outline lang-tab-btn active me-2" data-lang="vi">🇻🇳 Tiếng Việt</button></li>
+    <li class="nav-item"><button type="button" class="btn btn-admin-outline lang-tab-btn" data-lang="en">🇬🇧 English</button></li>
+  </ul>
 
-    <div class="card card-panel p-4 mb-4">
-        <h6 class="fw-bold mb-3"><i class="bi bi-building me-2"></i>Thông tin chung</h6>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Tên trường</label>
-                <input type="text" class="form-control" name="site_name" value="<?= e(setting($settings, 'site_name')) ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Slogan</label>
-                <input type="text" class="form-control" name="site_slogan" value="<?= e(setting($settings, 'site_slogan')) ?>">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-bold">Logo</label>
-                <input type="file" class="form-control" name="logo" accept="image/*">
-                <?php $logo = upload_url(setting($settings, 'logo'), 'settings'); ?>
-                <?php if ($logo): ?><img src="<?= $logo ?>" class="thumb-preview mt-2"><?php endif; ?>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-bold">Hotline</label>
-                <input type="text" class="form-control" name="hotline" value="<?= e(setting($settings, 'hotline')) ?>">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-bold">Email</label>
-                <input type="email" class="form-control" name="email" value="<?= e(setting($settings, 'email')) ?>">
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-bold">Địa chỉ</label>
-                <input type="text" class="form-control" name="address" value="<?= e(setting($settings, 'address')) ?>">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-bold">Link Fanpage</label>
-                <input type="text" class="form-control" name="fanpage_url" value="<?= e(setting($settings, 'fanpage_url')) ?>">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-bold">Link Youtube</label>
-                <input type="text" class="form-control" name="youtube_url" value="<?= e(setting($settings, 'youtube_url')) ?>">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-bold">Link Zalo</label>
-                <input type="text" class="form-control" name="zalo_url" value="<?= e(setting($settings, 'zalo_url')) ?>">
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-bold">Mã nhúng Google Map (iframe)</label>
-                <textarea class="form-control" name="map_iframe" rows="2"><?= e(setting($settings, 'map_iframe')) ?></textarea>
-            </div>
-        </div>
+  <div class="lang-panel" data-lang="vi">
+    <?php foreach ($fields as $key => $meta): ?>
+      <div class="mb-3">
+        <label class="form-label"><?= $meta['label'] ?> (VI)</label>
+        <?php if ($meta['type'] === 'textarea'): ?>
+          <textarea name="<?= $key ?>_vi" rows="3" class="form-control"><?= htmlspecialchars($settings[$key]['value_vi'] ?? '') ?></textarea>
+        <?php else: ?>
+          <input type="text" name="<?= $key ?>_vi" class="form-control" value="<?= htmlspecialchars($settings[$key]['value_vi'] ?? '') ?>">
+        <?php endif; ?>
+      </div>
+    <?php endforeach; ?>
+  </div>
+
+  <div class="lang-panel d-none" data-lang="en">
+    <?php foreach ($fields as $key => $meta): ?>
+      <div class="mb-3">
+        <label class="form-label"><?= $meta['label'] ?> (EN)</label>
+        <?php if ($meta['type'] === 'textarea'): ?>
+          <textarea name="<?= $key ?>_en" rows="3" class="form-control"><?= htmlspecialchars($settings[$key]['value_en'] ?? '') ?></textarea>
+        <?php else: ?>
+          <input type="text" name="<?= $key ?>_en" class="form-control" value="<?= htmlspecialchars($settings[$key]['value_en'] ?? '') ?>">
+        <?php endif; ?>
+      </div>
+    <?php endforeach; ?>
+  </div>
+
+  <hr class="my-4">
+  <h5 class="fw-bold mb-3">Hình ảnh</h5>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Ảnh Hero (banner đầu trang)</label>
+      <img src="<?= img_url($settings['hero_image']['value_vi'] ?? '') ?>" class="thumb-admin mb-2 d-block" style="width:120px;height:90px;">
+      <input type="file" name="hero_image" class="form-control">
     </div>
-
-    <div class="card card-panel p-4 mb-4">
-        <h6 class="fw-bold mb-3"><i class="bi bi-image me-2"></i>Banner trang chủ (Hero)</h6>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Tiêu đề chính</label>
-                <textarea class="form-control" name="hero_title" rows="2"><?= e(setting($settings, 'hero_title')) ?></textarea>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Mô tả phụ</label>
-                <textarea class="form-control" name="hero_subtitle" rows="2"><?= e(setting($settings, 'hero_subtitle')) ?></textarea>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Chữ trên nút CTA</label>
-                <input type="text" class="form-control" name="hero_button_text" value="<?= e(setting($settings, 'hero_button_text')) ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Ảnh banner</label>
-                <input type="file" class="form-control" name="hero_image" accept="image/*">
-                <?php $heroImg = upload_url(setting($settings, 'hero_image'), 'settings'); ?>
-                <?php if ($heroImg): ?><img src="<?= $heroImg ?>" class="thumb-preview mt-2"><?php endif; ?>
-            </div>
-        </div>
+    <div class="col-md-6">
+      <label class="form-label">Ảnh mục Giới thiệu</label>
+      <img src="<?= img_url($settings['about_image']['value_vi'] ?? '') ?>" class="thumb-admin mb-2 d-block" style="width:120px;height:90px;">
+      <input type="file" name="about_image" class="form-control">
     </div>
+  </div>
 
-    <div class="card card-panel p-4 mb-4">
-        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Phần giới thiệu &amp; thống kê</h6>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Tiêu đề giới thiệu</label>
-                <input type="text" class="form-control" name="about_title" value="<?= e(setting($settings, 'about_title')) ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Ảnh giới thiệu</label>
-                <input type="file" class="form-control" name="about_image" accept="image/*">
-                <?php $aboutImg = upload_url(setting($settings, 'about_image'), 'settings'); ?>
-                <?php if ($aboutImg): ?><img src="<?= $aboutImg ?>" class="thumb-preview mt-2"><?php endif; ?>
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-bold">Nội dung giới thiệu</label>
-                <textarea class="form-control" name="about_content" rows="4"><?= e(setting($settings, 'about_content')) ?></textarea>
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-bold">Số học sinh</label>
-                <input type="text" class="form-control" name="stat_students" value="<?= e(setting($settings, 'stat_students')) ?>">
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-bold">Số giáo viên</label>
-                <input type="text" class="form-control" name="stat_teachers" value="<?= e(setting($settings, 'stat_teachers')) ?>">
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-bold">Số năm hoạt động</label>
-                <input type="text" class="form-control" name="stat_years" value="<?= e(setting($settings, 'stat_years')) ?>">
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-bold">Số giải thưởng</label>
-                <input type="text" class="form-control" name="stat_awards" value="<?= e(setting($settings, 'stat_awards')) ?>">
-            </div>
-        </div>
-    </div>
-
-    <div class="card card-panel p-4 mb-4">
-        <h6 class="fw-bold mb-3"><i class="bi bi-layout-text-window me-2"></i>Footer</h6>
-        <label class="form-label fw-bold">Mô tả ngắn ở chân trang</label>
-        <textarea class="form-control" name="footer_description" rows="3"><?= e(setting($settings, 'footer_description')) ?></textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary-playful btn-lg px-5"><i class="bi bi-save me-1"></i> Lưu thay đổi</button>
+  <button type="submit" class="btn btn-admin-primary mt-4"><i class="bi bi-check-lg"></i> Lưu thay đổi</button>
 </form>
 
-<?php include __DIR__ . '/includes/admin_footer.php'; ?>
+<script>
+document.querySelectorAll('.lang-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.lang-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const lang = btn.dataset.lang;
+    document.querySelectorAll('.lang-panel').forEach(p => {
+      p.classList.toggle('d-none', p.dataset.lang !== lang);
+    });
+  });
+});
+</script>
+
+<?php require_once __DIR__ . '/includes/layout_foot.php'; ?>

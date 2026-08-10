@@ -1,72 +1,61 @@
 <?php
-require_once __DIR__ . '/../includes/functions.php';
 $pageTitle = 'Tin nhắn liên hệ';
-require_admin_login();
+require_once __DIR__ . '/includes/layout_head.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_check()) {
-        redirect_with_message('messages.php', 'danger', 'Phiên làm việc hết hạn.');
-    }
-    $action = $_POST['action'] ?? '';
-    $id = (int)($_POST['id'] ?? 0);
-
-    if ($action === 'mark_read') {
-        $pdo->prepare("UPDATE contact_messages SET is_read = 1 WHERE id = ?")->execute([$id]);
-        redirect_with_message('messages.php', 'success', 'Đã đánh dấu đã đọc.');
-    }
-    if ($action === 'delete') {
-        $pdo->prepare("DELETE FROM contact_messages WHERE id = ?")->execute([$id]);
-        redirect_with_message('messages.php', 'success', 'Đã xoá tin nhắn.');
-    }
+if (isset($_GET['mark_read'])) {
+    $pdo->prepare("UPDATE contact_messages SET status = 'read' WHERE id = ? AND status = 'new'")->execute([(int)$_GET['mark_read']]);
+    redirect('messages.php');
+}
+if (isset($_GET['mark_replied'])) {
+    $pdo->prepare("UPDATE contact_messages SET status = 'replied' WHERE id = ?")->execute([(int)$_GET['mark_replied']]);
+    redirect('messages.php');
+}
+if (isset($_GET['delete'])) {
+    $pdo->prepare("DELETE FROM contact_messages WHERE id = ?")->execute([(int)$_GET['delete']]);
+    flash_set('Đã xóa tin nhắn.');
+    redirect('messages.php');
 }
 
-$items = $pdo->query("SELECT * FROM contact_messages ORDER BY created_at DESC")->fetchAll();
-include __DIR__ . '/includes/admin_header.php';
+$messages = $pdo->query("SELECT * FROM contact_messages ORDER BY created_at DESC")->fetchAll();
 ?>
 
-<div class="card card-panel p-3">
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead><tr><th>Phụ huynh</th><th>Điện thoại</th><th>Email</th><th>Lời nhắn</th><th>Thời gian</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
-            <tbody>
-            <?php foreach ($items as $item): ?>
-                <tr class="<?= $item['is_read'] ? '' : 'fw-bold' ?>">
-                    <td><?= e($item['name']) ?></td>
-                    <td><?= e($item['phone']) ?></td>
-                    <td><?= e($item['email']) ?></td>
-                    <td class="fw-normal small" style="max-width:260px;"><?= nl2br(e($item['message'])) ?></td>
-                    <td class="small fw-normal"><?= date('d/m/Y H:i', strtotime($item['created_at'])) ?></td>
-                    <td>
-                        <?php if ($item['is_read']): ?>
-                            <span class="badge bg-secondary-subtle text-secondary">Đã đọc</span>
-                        <?php else: ?>
-                            <span class="badge badge-soft">Mới</span>
-                        <?php endif; ?>
-                    </td>
-                    <td class="text-end">
-                        <?php if (!$item['is_read']): ?>
-                        <form method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="action" value="mark_read">
-                            <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
-                            <button class="btn btn-sm btn-outline-success"><i class="bi bi-check-lg"></i></button>
-                        </form>
-                        <?php endif; ?>
-                        <form method="POST" class="d-inline" onsubmit="return confirm('Xoá tin nhắn này?');">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            <?php if (empty($items)): ?>
-                <tr><td colspan="7" class="text-center text-secondary py-4">Chưa có tin nhắn nào.</td></tr>
+<div class="a-card">
+  <div class="table-responsive">
+    <table class="table table-admin align-middle mb-0">
+      <thead>
+        <tr><th>Phụ huynh</th><th>Điện thoại</th><th>Lời nhắn</th><th>Thời gian</th><th>Trạng thái</th><th></th></tr>
+      </thead>
+      <tbody>
+        <?php if (empty($messages)): ?>
+          <tr><td colspan="6" class="text-center text-muted py-5">Chưa có tin nhắn liên hệ nào.</td></tr>
+        <?php endif; ?>
+        <?php foreach ($messages as $m): ?>
+        <tr>
+          <td class="fw-bold"><?= htmlspecialchars($m['parent_name']) ?></td>
+          <td><a href="tel:<?= htmlspecialchars($m['phone']) ?>"><?= htmlspecialchars($m['phone']) ?></a></td>
+          <td style="max-width:280px;"><?= nl2br(htmlspecialchars($m['message'])) ?></td>
+          <td class="text-muted small"><?= date('d/m/Y H:i', strtotime($m['created_at'])) ?></td>
+          <td>
+            <?php
+              $badgeClass = ['new' => 'badge-new', 'read' => 'badge-read', 'replied' => 'badge-replied'][$m['status']];
+              $badgeLabel = ['new' => 'Mới', 'read' => 'Đã xem', 'replied' => 'Đã phản hồi'][$m['status']];
+            ?>
+            <span class="badge <?= $badgeClass ?>"><?= $badgeLabel ?></span>
+          </td>
+          <td class="text-end">
+            <?php if ($m['status'] === 'new'): ?>
+              <a href="?mark_read=<?= $m['id'] ?>" class="btn btn-sm btn-admin-outline" title="Đánh dấu đã xem"><i class="bi bi-eye"></i></a>
             <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+            <?php if ($m['status'] !== 'replied'): ?>
+              <a href="?mark_replied=<?= $m['id'] ?>" class="btn btn-sm btn-admin-outline" title="Đánh dấu đã phản hồi"><i class="bi bi-check2"></i></a>
+            <?php endif; ?>
+            <a href="?delete=<?= $m['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa tin nhắn này?')"><i class="bi bi-trash"></i></a>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<?php include __DIR__ . '/includes/admin_footer.php'; ?>
+<?php require_once __DIR__ . '/includes/layout_foot.php'; ?>

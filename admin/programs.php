@@ -1,168 +1,111 @@
 <?php
-require_once __DIR__ . '/../includes/functions.php';
 $pageTitle = 'Chương trình học';
-require_admin_login();
+require_once __DIR__ . '/includes/layout_head.php';
 
-// ==== Xử lý thêm / sửa / xoá ====
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_check()) {
-        redirect_with_message('programs.php', 'danger', 'Phiên làm việc hết hạn.');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save') {
+    $id = $_POST['id'] ?? '';
+    $data = [
+        trim($_POST['name_vi']), trim($_POST['name_en']), trim($_POST['age_range']),
+        trim($_POST['desc_vi']), trim($_POST['desc_en']), trim($_POST['icon']) ?: 'bi-flower1',
+        (int)($_POST['sort_order'] ?? 0), isset($_POST['status']) ? 1 : 0
+    ];
+    if ($id) {
+        $stmt = $pdo->prepare("UPDATE age_groups SET name_vi=?, name_en=?, age_range=?, desc_vi=?, desc_en=?, icon=?, sort_order=?, status=? WHERE id=?");
+        $stmt->execute([...$data, $id]);
+        flash_set('Đã cập nhật chương trình học.');
+    } else {
+        $stmt = $pdo->prepare("INSERT INTO age_groups (name_vi, name_en, age_range, desc_vi, desc_en, icon, sort_order, status) VALUES (?,?,?,?,?,?,?,?)");
+        $stmt->execute($data);
+        flash_set('Đã thêm chương trình học mới.');
     }
-    $action = $_POST['action'] ?? '';
-
-    if ($action === 'save') {
-        $id          = (int)($_POST['id'] ?? 0);
-        $title       = trim($_POST['title'] ?? '');
-        $age_range   = trim($_POST['age_range'] ?? '');
-        $icon        = trim($_POST['icon'] ?? 'bi-stars');
-        $description = trim($_POST['description'] ?? '');
-        $order       = (int)($_POST['display_order'] ?? 0);
-        $status      = isset($_POST['status']) ? 1 : 0;
-
-        if ($title === '') {
-            redirect_with_message('programs.php', 'danger', 'Vui lòng nhập tiêu đề chương trình.');
-        }
-
-        if ($id > 0) {
-            $stmt = $pdo->prepare("UPDATE programs SET title=?, age_range=?, icon=?, description=?, display_order=?, status=? WHERE id=?");
-            $stmt->execute([$title, $age_range, $icon, $description, $order, $status, $id]);
-            redirect_with_message('programs.php', 'success', 'Đã cập nhật chương trình học.');
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO programs (title, age_range, icon, description, display_order, status) VALUES (?,?,?,?,?,?)");
-            $stmt->execute([$title, $age_range, $icon, $description, $order, $status]);
-            redirect_with_message('programs.php', 'success', 'Đã thêm chương trình học mới.');
-        }
-    }
-
-    if ($action === 'delete') {
-        $id = (int)($_POST['id'] ?? 0);
-        $pdo->prepare("DELETE FROM programs WHERE id = ?")->execute([$id]);
-        redirect_with_message('programs.php', 'success', 'Đã xoá chương trình học.');
-    }
+    redirect('programs.php');
 }
 
-$items = $pdo->query("SELECT * FROM programs ORDER BY display_order ASC, id DESC")->fetchAll();
-include __DIR__ . '/includes/admin_header.php';
+if (isset($_GET['delete'])) {
+    $pdo->prepare("DELETE FROM age_groups WHERE id = ?")->execute([(int)$_GET['delete']]);
+    flash_set('Đã xóa.');
+    redirect('programs.php');
+}
 
-$iconOptions = ['bi-flower1', 'bi-tree', 'bi-flower3', 'bi-heart', 'bi-stars', 'bi-mortarboard-fill', 'bi-book-half', 'bi-palette-fill', 'bi-music-note-beamed', 'bi-puzzle-fill'];
+$editItem = null;
+if (isset($_GET['edit'])) {
+    $stmt = $pdo->prepare("SELECT * FROM age_groups WHERE id = ?");
+    $stmt->execute([(int)$_GET['edit']]);
+    $editItem = $stmt->fetch();
+}
+
+$items = $pdo->query("SELECT * FROM age_groups ORDER BY sort_order ASC")->fetchAll();
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <p class="text-secondary mb-0">Quản lý danh sách các lớp học / chương trình đào tạo hiển thị trên trang chủ.</p>
-    <button class="btn btn-primary-playful" data-bs-toggle="modal" data-bs-target="#programModal" onclick="openCreate()">
-        <i class="bi bi-plus-lg me-1"></i> Thêm chương trình
-    </button>
-</div>
-
-<div class="card card-panel p-3">
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead><tr><th>#</th><th>Icon</th><th>Tiêu đề</th><th>Độ tuổi</th><th>Thứ tự</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
-            <tbody>
-            <?php foreach ($items as $i => $item): ?>
-                <tr>
-                    <td><?= $i + 1 ?></td>
-                    <td><i class="bi <?= e($item['icon']) ?> fs-4 text-warning"></i></td>
-                    <td class="fw-bold"><?= e($item['title']) ?></td>
-                    <td><?= e($item['age_range']) ?></td>
-                    <td><?= (int)$item['display_order'] ?></td>
-                    <td><?= $item['status'] ? '<span class="badge bg-success-subtle text-success">Hiện</span>' : '<span class="badge bg-secondary-subtle text-secondary">Ẩn</span>' ?></td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-secondary" onclick='openEdit(<?= json_encode($item, JSON_UNESCAPED_UNICODE) ?>)'><i class="bi bi-pencil"></i></button>
-                        <form method="POST" class="d-inline" onsubmit="return confirm('Xoá chương trình này?');">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            <?php if (empty($items)): ?>
-                <tr><td colspan="7" class="text-center text-secondary py-4">Chưa có chương trình học nào.</td></tr>
-            <?php endif; ?>
-            </tbody>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="a-card">
+      <div class="table-responsive">
+        <table class="table table-admin align-middle mb-0">
+          <thead><tr><th>Icon</th><th>Tên lớp</th><th>Độ tuổi</th><th>Hiển thị</th><th></th></tr></thead>
+          <tbody>
+          <?php foreach ($items as $it): ?>
+            <tr>
+              <td><i class="bi <?= htmlspecialchars($it['icon']) ?> fs-4 text-warning"></i></td>
+              <td class="fw-bold"><?= htmlspecialchars($it['name_vi']) ?></td>
+              <td><?= htmlspecialchars($it['age_range']) ?></td>
+              <td><?= $it['status'] ? '<span class="badge badge-replied">Hiện</span>' : '<span class="badge badge-read">Ẩn</span>' ?></td>
+              <td class="text-end">
+                <a href="?edit=<?= $it['id'] ?>" class="btn btn-sm btn-admin-outline"><i class="bi bi-pencil"></i></a>
+                <a href="?delete=<?= $it['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa mục này?')"><i class="bi bi-trash"></i></a>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
         </table>
+      </div>
     </div>
-</div>
-
-<!-- Modal thêm / sửa -->
-<div class="modal fade" id="programModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST">
-                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                <input type="hidden" name="action" value="save">
-                <input type="hidden" name="id" id="f_id">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Thêm chương trình học</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Tiêu đề *</label>
-                        <input type="text" name="title" id="f_title" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Độ tuổi</label>
-                        <input type="text" name="age_range" id="f_age_range" class="form-control" placeholder="VD: 3 - 4 tuổi">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Icon</label>
-                        <select name="icon" id="f_icon" class="form-select">
-                            <?php foreach ($iconOptions as $ic): ?>
-                                <option value="<?= $ic ?>"><?= $ic ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Mô tả</label>
-                        <textarea name="description" id="f_description" class="form-control" rows="3"></textarea>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label fw-bold">Thứ tự hiển thị</label>
-                            <input type="number" name="display_order" id="f_display_order" class="form-control" value="0">
-                        </div>
-                        <div class="col-6 d-flex align-items-end">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="status" id="f_status" checked>
-                                <label class="form-check-label fw-bold" for="f_status">Hiển thị</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Huỷ</button>
-                    <button type="submit" class="btn btn-primary-playful">Lưu lại</button>
-                </div>
-            </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="a-card">
+      <h5 class="fw-bold mb-3"><?= $editItem ? 'Sửa chương trình' : 'Thêm chương trình mới' ?></h5>
+      <form method="POST">
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="id" value="<?= $editItem['id'] ?? '' ?>">
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label">Tên lớp (VI)</label>
+            <input type="text" name="name_vi" class="form-control" required value="<?= htmlspecialchars($editItem['name_vi'] ?? '') ?>">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Tên lớp (EN)</label>
+            <input type="text" name="name_en" class="form-control" required value="<?= htmlspecialchars($editItem['name_en'] ?? '') ?>">
+          </div>
         </div>
+        <div class="mb-3 mt-3">
+          <label class="form-label">Độ tuổi (VD: 2 - 3 tuổi)</label>
+          <input type="text" name="age_range" class="form-control" value="<?= htmlspecialchars($editItem['age_range'] ?? '') ?>">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Mô tả (VI)</label>
+          <textarea name="desc_vi" rows="2" class="form-control"><?= htmlspecialchars($editItem['desc_vi'] ?? '') ?></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Mô tả (EN)</label>
+          <textarea name="desc_en" rows="2" class="form-control"><?= htmlspecialchars($editItem['desc_en'] ?? '') ?></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Icon (Bootstrap Icons)</label>
+          <input type="text" name="icon" class="form-control" value="<?= htmlspecialchars($editItem['icon'] ?? 'bi-flower1') ?>">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Thứ tự hiển thị</label>
+          <input type="number" name="sort_order" class="form-control" value="<?= htmlspecialchars($editItem['sort_order'] ?? 0) ?>">
+        </div>
+        <div class="form-check mb-3">
+          <input type="checkbox" name="status" class="form-check-input" id="statusChk" <?= (!$editItem || $editItem['status']) ? 'checked' : '' ?>>
+          <label class="form-check-label" for="statusChk">Hiển thị trên website</label>
+        </div>
+        <button type="submit" class="btn btn-admin-primary w-100"><?= $editItem ? 'Cập nhật' : 'Thêm mới' ?></button>
+        <?php if ($editItem): ?><a href="programs.php" class="btn btn-light w-100 mt-2">Hủy</a><?php endif; ?>
+      </form>
     </div>
+  </div>
 </div>
 
-<script>
-function openCreate() {
-    document.getElementById('modalTitle').textContent = 'Thêm chương trình học';
-    document.getElementById('f_id').value = '';
-    document.getElementById('f_title').value = '';
-    document.getElementById('f_age_range').value = '';
-    document.getElementById('f_icon').value = 'bi-stars';
-    document.getElementById('f_description').value = '';
-    document.getElementById('f_display_order').value = 0;
-    document.getElementById('f_status').checked = true;
-}
-function openEdit(item) {
-    document.getElementById('modalTitle').textContent = 'Sửa chương trình học';
-    document.getElementById('f_id').value = item.id;
-    document.getElementById('f_title').value = item.title;
-    document.getElementById('f_age_range').value = item.age_range;
-    document.getElementById('f_icon').value = item.icon;
-    document.getElementById('f_description').value = item.description;
-    document.getElementById('f_display_order').value = item.display_order;
-    document.getElementById('f_status').checked = item.status == 1;
-    new bootstrap.Modal(document.getElementById('programModal')).show();
-}
-</script>
-
-<?php include __DIR__ . '/includes/admin_footer.php'; ?>
+<?php require_once __DIR__ . '/includes/layout_foot.php'; ?>

@@ -1,115 +1,83 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-require_once __DIR__ . '/../config/db.php';
+/**
+ * Các hàm tiện ích dùng chung
+ */
 
-/** Lấy toàn bộ settings dạng mảng key => value */
-function get_settings(PDO $pdo): array
-{
+/** Lấy toàn bộ settings dưới dạng mảng key => row(value_vi, value_en) */
+function get_settings($pdo) {
     static $cache = null;
     if ($cache !== null) return $cache;
+    $stmt = $pdo->query("SELECT setting_key, value_vi, value_en FROM settings");
     $cache = [];
-    $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
     foreach ($stmt->fetchAll() as $row) {
-        $cache[$row['setting_key']] = $row['setting_value'];
+        $cache[$row['setting_key']] = $row;
     }
     return $cache;
 }
 
-/** Lấy 1 giá trị setting, có fallback */
-function setting(array $settings, string $key, string $default = ''): string
-{
-    return isset($settings[$key]) && $settings[$key] !== '' ? $settings[$key] : $default;
+/** Lấy 1 giá trị setting theo ngôn ngữ hiện tại */
+function setting($pdo, $key, $default = '') {
+    $settings = get_settings($pdo);
+    if (!isset($settings[$key])) return $default;
+    return t($settings[$key], 'value') ?: $default;
 }
 
-/** Chống XSS khi in dữ liệu ra HTML */
-function e(?string $value): string
-{
-    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
+function e($str) {
+    return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
 }
 
-/** Sinh / kiểm tra CSRF token */
-function csrf_token(): string
-{
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION['csrf_token'];
+function slugify($text) {
+    $text = preg_replace('~[^\pL\d]+~u', '-', $text);
+    $text = trim($text, '-');
+    $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
+    $text = strtolower($text);
+    $text = preg_replace('~[^-\w]+~', '', $text);
+    return $text ?: 'item';
 }
 
-function csrf_check(): bool
-{
-    return isset($_POST['csrf_token']) && isset($_SESSION['csrf_token'])
-        && hash_equals($_SESSION['csrf_token'], $_POST['csrf_token']);
-}
+/** Upload ảnh an toàn, trả về tên file đã lưu hoặc false */
+function upload_image($fileInputName, $subfolder) {
+    if (empty($_FILES[$fileInputName]['name'])) return false;
+    $file = $_FILES[$fileInputName];
+    if ($file['error'] !== UPLOAD_ERR_OK) return false;
 
-/** Kiểm tra đăng nhập admin, chuyển hướng nếu chưa đăng nhập */
-function require_admin_login(): void
-{
-    if (empty($_SESSION['admin_id'])) {
-        header('Location: login.php');
-        exit;
-    }
-}
-
-/** Upload ảnh an toàn, trả về tên file đã lưu hoặc null nếu không có file */
-function handle_upload(string $inputName, string $subfolder): ?string
-{
-    if (empty($_FILES[$inputName]['name']) || $_FILES[$inputName]['error'] !== UPLOAD_ERR_OK) {
-        return null;
-    }
     $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-    $ext = strtolower(pathinfo($_FILES[$inputName]['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, $allowed, true)) {
-        return null;
-    }
-    if ($_FILES[$inputName]['size'] > 5 * 1024 * 1024) { // giới hạn 5MB
-        return null;
-    }
-    $targetDir = __DIR__ . '/../assets/uploads/' . $subfolder . '/';
-    if (!is_dir($targetDir)) {
-        mkdir($targetDir, 0755, true);
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowed, true)) return false;
+
+    // Kiểm tra thực sự là ảnh
+    if (@getimagesize($file['tmp_name']) === false) return false;
+
+    $destDir = rtrim(UPLOAD_PATH, '/') . '/' . $subfolder . '/';
+    if (!is_dir($destDir)) {
+        mkdir($destDir, 0755, true);
     }
     $filename = uniqid($subfolder . '_', true) . '.' . $ext;
-    if (move_uploaded_file($_FILES[$inputName]['tmp_name'], $targetDir . $filename)) {
-        return $filename;
+    if (move_uploaded_file($file['tmp_name'], $destDir . $filename)) {
+        return $subfolder . '/' . $filename;
     }
-    return null;
+    return false;
 }
 
-/** Xoá file ảnh cũ trong thư mục uploads (nếu tồn tại) */
-function delete_upload(?string $filename, string $subfolder): void
-{
-    if (!$filename) return;
-    $path = __DIR__ . '/../assets/uploads/' . $subfolder . '/' . $filename;
-    if (is_file($path)) {
-        @unlink($path);
-    }
+function img_url($path, $placeholder = 'assets/images/placeholder.svg') {
+    if (empty($path)) return BASE_URL . '/' . $placeholder;
+    return UPLOAD_URL . $path;
 }
 
-/** Đường dẫn ảnh public, dùng ảnh mặc định nếu rỗng */
-function upload_url(?string $filename, string $subfolder, string $fallback = ''): string
-{
-    if ($filename && is_file(__DIR__ . '/../assets/uploads/' . $subfolder . '/' . $filename)) {
-        return BASE_URL . '/assets/uploads/' . $subfolder . '/' . $filename;
-    }
-    return $fallback;
-}
-
-function redirect_with_message(string $url, string $type, string $message): void
-{
-    $_SESSION['flash'] = ['type' => $type, 'message' => $message];
-    header('Location: ' . $url);
+function redirect($url) {
+    header("Location: $url");
     exit;
 }
 
-function get_flash(): ?array
-{
+function flash_set($msg, $type = 'success') {
+    $_SESSION['flash'] = ['msg' => $msg, 'type' => $type];
+}
+
+function flash_get() {
     if (!empty($_SESSION['flash'])) {
-        $flash = $_SESSION['flash'];
+        $f = $_SESSION['flash'];
         unset($_SESSION['flash']);
-        return $flash;
+        return $f;
     }
     return null;
 }

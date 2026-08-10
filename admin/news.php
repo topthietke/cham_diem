@@ -1,173 +1,122 @@
 <?php
-require_once __DIR__ . '/../includes/functions.php';
 $pageTitle = 'Tin tức';
-require_admin_login();
+require_once __DIR__ . '/includes/layout_head.php';
+require_once __DIR__ . '/../includes/functions.php';
 
-function make_slug(string $str): string
-{
-    $str = strtolower(trim($str));
-    $str = preg_replace('/[áàảãạăắằẳẵặâấầẩẫậ]/u', 'a', $str);
-    $str = preg_replace('/[éèẻẽẹêếềểễệ]/u', 'e', $str);
-    $str = preg_replace('/[íìỉĩị]/u', 'i', $str);
-    $str = preg_replace('/[óòỏõọôốồổỗộơớờởỡợ]/u', 'o', $str);
-    $str = preg_replace('/[úùủũụưứừửữự]/u', 'u', $str);
-    $str = preg_replace('/[ýỳỷỹỵ]/u', 'y', $str);
-    $str = preg_replace('/đ/u', 'd', $str);
-    $str = preg_replace('/[^a-z0-9\s-]/', '', $str);
-    $str = preg_replace('/[\s-]+/', '-', $str);
-    return trim($str, '-') ?: 'tin-tuc';
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save') {
+    $id = $_POST['id'] ?? '';
+    $title_vi = trim($_POST['title_vi']);
+    $title_en = trim($_POST['title_en']);
+    $summary_vi = trim($_POST['summary_vi']);
+    $summary_en = trim($_POST['summary_en']);
+    $content_vi = $_POST['content_vi'] ?? '';
+    $content_en = $_POST['content_en'] ?? '';
+    $status = isset($_POST['status']) ? 1 : 0;
+    $slug = slugify($title_vi);
+    $image = upload_image('image', 'news');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_check()) {
-        redirect_with_message('news.php', 'danger', 'Phiên làm việc hết hạn.');
-    }
-    $action = $_POST['action'] ?? '';
-
-    if ($action === 'save') {
-        $id      = (int)($_POST['id'] ?? 0);
-        $title   = trim($_POST['title'] ?? '');
-        $summary = trim($_POST['summary'] ?? '');
-        $content = trim($_POST['content'] ?? '');
-        $status  = isset($_POST['status']) ? 1 : 0;
-
-        if ($title === '') {
-            redirect_with_message('news.php', 'danger', 'Vui lòng nhập tiêu đề bài viết.');
-        }
-        $slug = make_slug($title);
-        $uploaded = handle_upload('image', 'news');
-
-        if ($id > 0) {
-            if ($uploaded) {
-                $old = $pdo->prepare("SELECT image FROM news WHERE id=?");
-                $old->execute([$id]);
-                delete_upload($old->fetchColumn(), 'news');
-                $stmt = $pdo->prepare("UPDATE news SET title=?, slug=?, summary=?, content=?, image=?, status=? WHERE id=?");
-                $stmt->execute([$title, $slug, $summary, $content, $uploaded, $status, $id]);
-            } else {
-                $stmt = $pdo->prepare("UPDATE news SET title=?, slug=?, summary=?, content=?, status=? WHERE id=?");
-                $stmt->execute([$title, $slug, $summary, $content, $status, $id]);
-            }
-            redirect_with_message('news.php', 'success', 'Đã cập nhật bài viết.');
+    if ($id) {
+        if ($image) {
+            $pdo->prepare("UPDATE news SET title_vi=?, title_en=?, summary_vi=?, summary_en=?, content_vi=?, content_en=?, status=?, slug=?, image=? WHERE id=?")
+                ->execute([$title_vi, $title_en, $summary_vi, $summary_en, $content_vi, $content_en, $status, $slug, $image, $id]);
         } else {
-            $stmt = $pdo->prepare("INSERT INTO news (title, slug, summary, content, image, status) VALUES (?,?,?,?,?,?)");
-            $stmt->execute([$title, $slug, $summary, $content, $uploaded, $status]);
-            redirect_with_message('news.php', 'success', 'Đã đăng bài viết mới.');
+            $pdo->prepare("UPDATE news SET title_vi=?, title_en=?, summary_vi=?, summary_en=?, content_vi=?, content_en=?, status=?, slug=? WHERE id=?")
+                ->execute([$title_vi, $title_en, $summary_vi, $summary_en, $content_vi, $content_en, $status, $slug, $id]);
         }
+        flash_set('Đã cập nhật tin tức.');
+    } else {
+        if (!$image) { flash_set('Vui lòng chọn hình ảnh cho bài viết.', 'error'); redirect('news.php'); }
+        $pdo->prepare("INSERT INTO news (title_vi, title_en, summary_vi, summary_en, content_vi, content_en, image, slug, status, published_at) VALUES (?,?,?,?,?,?,?,?,?,NOW())")
+            ->execute([$title_vi, $title_en, $summary_vi, $summary_en, $content_vi, $content_en, $image, $slug, $status]);
+        flash_set('Đã thêm tin tức mới.');
     }
-
-    if ($action === 'delete') {
-        $id = (int)($_POST['id'] ?? 0);
-        $stmt = $pdo->prepare("SELECT image FROM news WHERE id=?");
-        $stmt->execute([$id]);
-        delete_upload($stmt->fetchColumn(), 'news');
-        $pdo->prepare("DELETE FROM news WHERE id = ?")->execute([$id]);
-        redirect_with_message('news.php', 'success', 'Đã xoá bài viết.');
-    }
+    redirect('news.php');
 }
 
-$items = $pdo->query("SELECT * FROM news ORDER BY created_at DESC")->fetchAll();
-include __DIR__ . '/includes/admin_header.php';
+if (isset($_GET['delete'])) {
+    $pdo->prepare("DELETE FROM news WHERE id = ?")->execute([(int)$_GET['delete']]);
+    flash_set('Đã xóa.');
+    redirect('news.php');
+}
+
+$editItem = null;
+if (isset($_GET['edit'])) {
+    $stmt = $pdo->prepare("SELECT * FROM news WHERE id = ?");
+    $stmt->execute([(int)$_GET['edit']]);
+    $editItem = $stmt->fetch();
+}
+
+$items = $pdo->query("SELECT * FROM news ORDER BY published_at DESC")->fetchAll();
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <p class="text-secondary mb-0">Quản lý tin tức, hoạt động và sự kiện của trường.</p>
-    <button class="btn btn-primary-playful" data-bs-toggle="modal" data-bs-target="#newsModal" onclick="openCreate()">
-        <i class="bi bi-plus-lg me-1"></i> Đăng bài mới
-    </button>
-</div>
-
-<div class="card card-panel p-3">
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead><tr><th>Ảnh</th><th>Tiêu đề</th><th>Tóm tắt</th><th>Ngày đăng</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
-            <tbody>
-            <?php foreach ($items as $item): ?>
-                <tr>
-                    <td><img src="<?= e(upload_url($item['image'], 'news', 'https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=200&auto=format&fit=crop')) ?>" class="thumb-preview"></td>
-                    <td class="fw-bold"><?= e($item['title']) ?></td>
-                    <td class="text-truncate small text-secondary" style="max-width:220px;"><?= e($item['summary']) ?></td>
-                    <td class="small"><?= date('d/m/Y', strtotime($item['created_at'])) ?></td>
-                    <td><?= $item['status'] ? '<span class="badge bg-success-subtle text-success">Hiện</span>' : '<span class="badge bg-secondary-subtle text-secondary">Ẩn</span>' ?></td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-secondary" onclick='openEdit(<?= json_encode($item, JSON_UNESCAPED_UNICODE) ?>)'><i class="bi bi-pencil"></i></button>
-                        <form method="POST" class="d-inline" onsubmit="return confirm('Xoá bài viết này?');">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            <?php if (empty($items)): ?>
-                <tr><td colspan="6" class="text-center text-secondary py-4">Chưa có bài viết nào.</td></tr>
-            <?php endif; ?>
-            </tbody>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="a-card">
+      <div class="table-responsive">
+        <table class="table table-admin align-middle mb-0">
+          <thead><tr><th>Ảnh</th><th>Tiêu đề</th><th>Ngày đăng</th><th>Hiển thị</th><th></th></tr></thead>
+          <tbody>
+          <?php foreach ($items as $it): ?>
+            <tr>
+              <td><img src="<?= img_url($it['image']) ?>" class="thumb-admin"></td>
+              <td class="fw-bold"><?= htmlspecialchars($it['title_vi']) ?></td>
+              <td class="small text-muted"><?= date('d/m/Y', strtotime($it['published_at'])) ?></td>
+              <td><?= $it['status'] ? '<span class="badge badge-replied">Hiện</span>' : '<span class="badge badge-read">Ẩn</span>' ?></td>
+              <td class="text-end">
+                <a href="?edit=<?= $it['id'] ?>" class="btn btn-sm btn-admin-outline"><i class="bi bi-pencil"></i></a>
+                <a href="?delete=<?= $it['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa tin tức này?')"><i class="bi bi-trash"></i></a>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
         </table>
+      </div>
     </div>
-</div>
-
-<div class="modal fade" id="newsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                <input type="hidden" name="action" value="save">
-                <input type="hidden" name="id" id="f_id">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Đăng bài mới</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Tiêu đề *</label>
-                        <input type="text" name="title" id="f_title" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Ảnh đại diện</label>
-                        <input type="file" name="image" class="form-control" accept="image/*">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Tóm tắt</label>
-                        <textarea name="summary" id="f_summary" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nội dung chi tiết</label>
-                        <textarea name="content" id="f_content" class="form-control" rows="6"></textarea>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="status" id="f_status" checked>
-                        <label class="form-check-label fw-bold" for="f_status">Hiển thị trên trang chủ</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Huỷ</button>
-                    <button type="submit" class="btn btn-primary-playful">Lưu lại</button>
-                </div>
-            </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="a-card">
+      <h5 class="fw-bold mb-3"><?= $editItem ? 'Sửa tin tức' : 'Thêm tin tức mới' ?></h5>
+      <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="id" value="<?= $editItem['id'] ?? '' ?>">
+        <div class="mb-3">
+          <label class="form-label">Tiêu đề (VI)</label>
+          <input type="text" name="title_vi" class="form-control" required value="<?= htmlspecialchars($editItem['title_vi'] ?? '') ?>">
         </div>
+        <div class="mb-3">
+          <label class="form-label">Tiêu đề (EN)</label>
+          <input type="text" name="title_en" class="form-control" value="<?= htmlspecialchars($editItem['title_en'] ?? '') ?>">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Tóm tắt (VI)</label>
+          <textarea name="summary_vi" rows="2" class="form-control"><?= htmlspecialchars($editItem['summary_vi'] ?? '') ?></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Tóm tắt (EN)</label>
+          <textarea name="summary_en" rows="2" class="form-control"><?= htmlspecialchars($editItem['summary_en'] ?? '') ?></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Nội dung chi tiết (VI)</label>
+          <textarea name="content_vi" rows="4" class="form-control"><?= htmlspecialchars($editItem['content_vi'] ?? '') ?></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Nội dung chi tiết (EN)</label>
+          <textarea name="content_en" rows="4" class="form-control"><?= htmlspecialchars($editItem['content_en'] ?? '') ?></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Hình ảnh <?= $editItem ? '(để trống nếu giữ ảnh cũ)' : '' ?></label>
+          <?php if ($editItem): ?><img src="<?= img_url($editItem['image']) ?>" class="thumb-admin d-block mb-2" style="width:120px;height:90px;"><?php endif; ?>
+          <input type="file" name="image" class="form-control" <?= $editItem ? '' : 'required' ?>>
+        </div>
+        <div class="form-check mb-3">
+          <input type="checkbox" name="status" class="form-check-input" id="statusChk" <?= (!$editItem || $editItem['status']) ? 'checked' : '' ?>>
+          <label class="form-check-label" for="statusChk">Hiển thị trên website</label>
+        </div>
+        <button type="submit" class="btn btn-admin-primary w-100"><?= $editItem ? 'Cập nhật' : 'Thêm mới' ?></button>
+        <?php if ($editItem): ?><a href="news.php" class="btn btn-light w-100 mt-2">Hủy</a><?php endif; ?>
+      </form>
     </div>
+  </div>
 </div>
 
-<script>
-function openCreate() {
-    document.getElementById('modalTitle').textContent = 'Đăng bài mới';
-    document.getElementById('f_id').value = '';
-    document.getElementById('f_title').value = '';
-    document.getElementById('f_summary').value = '';
-    document.getElementById('f_content').value = '';
-    document.getElementById('f_status').checked = true;
-}
-function openEdit(item) {
-    document.getElementById('modalTitle').textContent = 'Sửa bài viết';
-    document.getElementById('f_id').value = item.id;
-    document.getElementById('f_title').value = item.title;
-    document.getElementById('f_summary').value = item.summary;
-    document.getElementById('f_content').value = item.content;
-    document.getElementById('f_status').checked = item.status == 1;
-    new bootstrap.Modal(document.getElementById('newsModal')).show();
-}
-</script>
-
-<?php include __DIR__ . '/includes/admin_footer.php'; ?>
+<?php require_once __DIR__ . '/includes/layout_foot.php'; ?>
