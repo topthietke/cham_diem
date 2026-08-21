@@ -1,0 +1,166 @@
+:root {
+    --brand: #6f42c1;
+    --brand-dark: #4b2a86;
+    --brand-light: #f3eefc;
+}
+
+body {
+    background-color: #f7f7fb;
+    font-family: 'Segoe UI', Roboto, -apple-system, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: .3px;
+}
+
+.hero {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+    color: #fff;
+    border-radius: 0 0 24px 24px;
+    padding: 40px 0 56px;
+}
+
+.hero h1 {
+    font-weight: 700;
+}
+
+.search-card {
+    margin-top: -40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .08);
+    border: none;
+}
+
+.category-pill {
+    cursor: pointer;
+    border: 1px solid #e2d9f5;
+    background: #fff;
+    color: var(--brand-dark);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: .85rem;
+    white-space: nowrap;
+    transition: all .15s ease-in-out;
+}
+
+.category-pill:hover {
+    background: var(--brand-light);
+}
+
+.category-pill.active {
+    background: var(--brand);
+    color: #fff;
+    border-color: var(--brand);
+}
+
+.pill-scroller {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.question-card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .04);
+    transition: box-shadow .15s ease-in-out, transform .15s ease-in-out;
+    margin-bottom: 16px;
+}
+
+.question-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
+    transform: translateY(-2px);
+}
+
+.question-card .card-header {
+    background: #fff;
+    border-bottom: none;
+    border-radius: 14px 14px 0 0 !important;
+    cursor: pointer;
+    padding: 16px 20px;
+}
+
+.question-card .card-body {
+    padding: 0 20px 18px 44px;
+    color: #444;
+}
+
+.q-index {
+    color: var(--brand);
+    font-weight: 700;
+    margin-right: 8px;
+}
+
+.stat-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .04);
+}
+
+.stat-box .num {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--brand);
+}
+
+#emptyState {
+    display: none;
+    text-align: center;
+    padding: 60px 0;
+    color: #888;
+}
+
+.footer {
+    padding: 30px 0;
+    text-align: center;
+    color: #999;
+    font-size: .85rem;
+}
+
+/* Admin */
+.admin-sidebar {
+    background: var(--brand-dark);
+    min-height: 100vh;
+    color: #fff;
+}
+
+.admin-sidebar a {
+    color: #e6ddf7;
+    text-decoration: none;
+    display: block;
+    padding: 10px 16px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+
+.admin-sidebar a:hover,
+.admin-sidebar a.active {
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
+}
+
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+}
+
+.login-card {
+    border-radius: 16px;
+    border: none;
+    width: 380px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .25);
+}
+
+.answer-cell {
+    max-width: 420px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
