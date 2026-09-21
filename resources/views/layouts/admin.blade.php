@@ -76,6 +76,15 @@
                 <a href="{{ route('admin.users.index') }}" class="admin-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                     <i class="bi bi-person-badge"></i>Tài khoản admin
                 </a>
+                <a href="{{ route('admin.jobs.index') }}" class="admin-nav-link {{ request()->routeIs('admin.jobs.*') ? 'active' : '' }}">
+                    <i class="bi bi-hourglass-split"></i>Jobs đang chờ
+                </a>
+                <a href="{{ route('admin.failed-jobs.index') }}" class="admin-nav-link {{ request()->routeIs('admin.failed-jobs.*') ? 'active' : '' }}">
+                    <i class="bi bi-exclamation-triangle"></i>Danh sách lỗi
+                </a>
+                <a href="{{ route('admin.audit-logs.index') }}" class="admin-nav-link {{ request()->routeIs('admin.audit-logs.*') ? 'active' : '' }}">
+                    <i class="bi bi-clock-history"></i>Thao tác người dùng
+                </a>
             @endif
             <form method="POST" action="{{ route('admin.logout') }}" class="mt-3">
                 @csrf

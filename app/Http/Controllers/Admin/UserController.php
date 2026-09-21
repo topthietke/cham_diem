@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -33,12 +35,14 @@ class UserController extends Controller
             'role' => ['required', Rule::in([User::ROLE_SUPER_ADMIN, User::ROLE_EVALUATOR])],
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'role' => $data['role'],
         ]);
+
+        $this->recordAudit('created', $user, null, $user->only(['name', 'email', 'role']));
 
         return redirect()->route('admin.users.index')->with('status', 'Đã tạo tài khoản admin mới.');
     }
@@ -50,6 +54,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $oldValues = $user->only(['name', 'email', 'role']);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
@@ -68,6 +73,7 @@ class UserController extends Controller
         }
 
         $user->save();
+        $this->recordAudit('updated', $user, $oldValues, $user->only(['name', 'email', 'role']));
 
         return redirect()->route('admin.users.index')->with('status', 'Đã cập nhật tài khoản.');
     }
@@ -78,8 +84,24 @@ class UserController extends Controller
             return back()->with('error', 'Không thể tự xoá tài khoản đang đăng nhập.');
         }
 
+        $oldValues = $user->only(['name', 'email', 'role']);
         $user->delete();
+        $this->recordAudit('deleted', $user, $oldValues, null);
 
         return redirect()->route('admin.users.index')->with('status', 'Đã xoá tài khoản.');
+    }
+
+    private function recordAudit(string $action, Model $model, ?array $oldValues, ?array $newValues): void
+    {
+        AuditLog::create([
+            'user_id' => request()->user()->id,
+            'action' => $action,
+            'auditable_type' => $model::class,
+            'auditable_id' => $model->getKey(),
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
     }
 }

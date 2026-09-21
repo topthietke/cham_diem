@@ -1,16 +1,18 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Public\PublicFeedbackController;
-use App\Http\Controllers\Public\PublicSubmissionController;
-use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\AiProviderController;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FeedbackController;
+use App\Http\Controllers\Admin\JobController;
 use App\Http\Controllers\Admin\ParentController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Admin\SubmissionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Public\PublicFeedbackController;
+use App\Http\Controllers\Public\PublicSubmissionController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('nop-bai')->name('public.')->group(function () {
     Route::get('/', [PublicSubmissionController::class, 'create'])->name('submissions.create');
@@ -54,6 +56,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->parameters(['ai-providers' => 'aiProvider']);
             Route::post('ai-providers/{aiProvider}/check', [AiProviderController::class, 'check'])->name('ai-providers.check');
             Route::resource('users', UserController::class)->except(['show']);
+            Route::get('jobs', [JobController::class, 'index'])->name('jobs.index');
+            Route::delete('jobs/{job}', [JobController::class, 'destroy'])->name('jobs.destroy');
+            Route::get('failed-jobs', [JobController::class, 'failed'])->name('failed-jobs.index');
+            Route::post('failed-jobs/{failedJob}/retry', [JobController::class, 'retry'])->name('failed-jobs.retry');
+            Route::delete('failed-jobs/{failedJob}', [JobController::class, 'forget'])->name('failed-jobs.destroy');
+            Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
         });
     });
 });

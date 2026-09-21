@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\AiProvider;
 use App\Models\Submission;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Throwable;
@@ -58,6 +60,17 @@ class GeminiEvaluationService
             $response = Http::acceptJson()
                 ->asJson()
                 ->withQueryParameters(['key' => $apiKey])
+                ->retry([1000, 5000, 15000], 0, function (Throwable $exception): bool {
+                    if ($exception instanceof ConnectionException) {
+                        return true;
+                    }
+
+                    if (! $exception instanceof RequestException) {
+                        return false;
+                    }
+
+                    return in_array($exception->response->status(), [429, 500, 502, 503, 504], true);
+                }, false)
                 ->timeout(210)
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
                     'contents' => [
@@ -74,7 +87,10 @@ class GeminiEvaluationService
         }
 
         if ($response->failed()) {
-            throw new RuntimeException('Gemini trả về lỗi HTTP '.$response->status().'.');
+            $message = data_get($response->json(), 'error.message');
+            $detail = is_string($message) && $message !== '' ? ': '.$message : '';
+
+            throw new RuntimeException('Gemini trả về lỗi HTTP '.$response->status().$detail);
         }
 
         return $response->json();

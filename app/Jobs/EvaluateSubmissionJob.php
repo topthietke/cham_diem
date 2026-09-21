@@ -18,17 +18,15 @@ class EvaluateSubmissionJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /** Số lần thử lại tối đa khi gọi Gemini thất bại (timeout, rate limit, lỗi mạng...) */
-    public int $tries = 3;
+    public int $tries = 4;
 
-    /** Giãn cách giữa các lần retry (giây): 30s -> 1p -> 2p */
-    public array $backoff = [30, 60, 120];
+    /** Giãn cách giữa các lần retry (giây): 1p -> 3p -> 10p */
+    public array $backoff = [60, 180, 600];
 
     /** Timeout riêng cho job (giây), cao hơn HTTP timeout của service 1 chút */
     public int $timeout = 240;
 
-    public function __construct(public Submission $submission)
-    {
-    }
+    public function __construct(public Submission $submission) {}
 
     public function handle(GeminiEvaluationService $geminiService): void
     {

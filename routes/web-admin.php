@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FeedbackController;
+use App\Http\Controllers\Admin\JobController;
 use App\Http\Controllers\Admin\ParentController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Admin\SubmissionController;
@@ -40,6 +42,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Chỉ Super Admin được quản lý tài khoản admin khác
         Route::middleware('super_admin')->group(function () {
             Route::resource('users', UserController::class)->except(['show']);
+            Route::get('jobs', [JobController::class, 'index'])->name('jobs.index');
+            Route::delete('jobs/{job}', [JobController::class, 'destroy'])->name('jobs.destroy');
+            Route::get('failed-jobs', [JobController::class, 'failed'])->name('failed-jobs.index');
+            Route::post('failed-jobs/{failedJob}/retry', [JobController::class, 'retry'])->name('failed-jobs.retry');
+            Route::delete('failed-jobs/{failedJob}', [JobController::class, 'forget'])->name('failed-jobs.destroy');
+            Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
         });
     });
 });
