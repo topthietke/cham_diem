@@ -70,6 +70,9 @@
                 <i class="bi bi-chat-dots"></i>Phản hồi
             </a>
             @if (auth()->user()?->isSuperAdmin())
+                <a href="{{ route('admin.ai-providers.index') }}" class="admin-nav-link {{ request()->routeIs('admin.ai-providers.*') ? 'active' : '' }}">
+                    <i class="bi bi-cpu"></i>Quản lý AI
+                </a>
                 <a href="{{ route('admin.users.index') }}" class="admin-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                     <i class="bi bi-person-badge"></i>Tài khoản admin
                 </a>
