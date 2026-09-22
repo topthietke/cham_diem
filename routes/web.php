@@ -51,6 +51,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Chỉ Super Admin được quản lý tài khoản admin khác
         Route::middleware('super_admin')->group(function () {
+            Route::post('ai-providers/models', [AiProviderController::class, 'models'])->name('ai-providers.models');
             Route::resource('ai-providers', AiProviderController::class)
                 ->except(['show'])
                 ->parameters(['ai-providers' => 'aiProvider']);

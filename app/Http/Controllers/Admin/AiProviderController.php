@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AiProvider;
 use App\Services\AiConnectionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -54,6 +55,16 @@ class AiProviderController extends Controller
         $aiProvider->delete();
 
         return back()->with('status', 'Đã xoá AI.');
+    }
+
+    public function models(Request $request, AiConnectionService $connection): JsonResponse
+    {
+        $data = $request->validate([
+            'provider' => ['required', 'string', 'in:gemini,openai,claude'],
+            'api_key' => ['required', 'string', 'max:1000'],
+        ]);
+
+        return response()->json($connection->models($data['provider'], $data['api_key']));
     }
 
     public function check(AiProvider $aiProvider, AiConnectionService $connection): RedirectResponse
