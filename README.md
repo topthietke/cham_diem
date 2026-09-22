@@ -1,58 +1,163 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+https://aistudio.google.com
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# 🤖 Gemini Chat — Laravel + Google Gemini API
 
-## About Laravel
+Ứng dụng chat AI được xây dựng bằng Laravel, kết nối trực tiếp với Google Gemini API.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+![Preview](preview.png)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## ✨ Tính năng
 
-## Learning Laravel
+- 💬 Chat real-time với Google Gemini AI
+- 🔄 Lưu lịch sử hội thoại trong phiên (multi-turn conversation)
+- 🎛️ Tuỳ chỉnh model, nhiệt độ (temperature), system prompt
+- ⚡ Kiểm tra kết nối API
+- 📊 Hiển thị số token đã dùng
+- 📱 Responsive — hỗ trợ mobile
+- 🌙 Dark mode mặc định
+- 🔐 CSRF protection
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 📋 Yêu cầu
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+- PHP >= 8.2
+- Composer
+- Laravel 11
+- Google Gemini API Key ([lấy tại đây](https://aistudio.google.com/app/apikey))
 
-## Agentic Development
+---
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## 🚀 Cài đặt
+
+### 1. Clone hoặc tải dự án
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone <your-repo-url> gemini-chat
+cd gemini-chat
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Cài dependencies
 
-## Contributing
+```bash
+composer install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 3. Cấu hình môi trường
 
-## Code of Conduct
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 4. Thêm Gemini API Key vào `.env`
 
-## Security Vulnerabilities
+```env
+GEMINI_API_KEY=your_actual_api_key_here
+GEMINI_MODEL=gemini-2.0-flash
+GEMINI_TEMPERATURE=0.7
+GEMINI_MAX_TOKENS=2048
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+> 💡 **Lấy API Key miễn phí tại:** https://aistudio.google.com/app/apikey
 
-## License
+### 5. Chạy ứng dụng
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan serve
+```
+
+Mở trình duyệt tại: **http://localhost:8000**
+
+---
+
+## 📁 Cấu trúc dự án
+
+```
+gemini-laravel/
+├── app/
+│   ├── Http/
+│   │   └── Controllers/
+│   │       └── ChatController.php      # Xử lý request chat
+│   └── Services/
+│       └── GeminiService.php           # Tích hợp Gemini API
+├── config/
+│   └── gemini.php                      # Cấu hình Gemini
+├── resources/
+│   └── views/
+│       ├── layouts/
+│       │   └── app.blade.php           # Layout chính
+│       └── chat/
+│           └── index.blade.php         # Giao diện chat
+├── routes/
+│   └── web.php                         # Định tuyến
+├── public/
+│   ├── css/app.css                     # Stylesheet
+│   └── js/app.js                       # Frontend logic
+└── .env.example                        # Mẫu cấu hình
+```
+
+---
+
+## 🔌 API Endpoints
+
+| Method | URL | Mô tả |
+|--------|-----|-------|
+| GET | `/` | Trang chat chính |
+| POST | `/chat/send` | Gửi tin nhắn |
+| GET | `/chat/test-connection` | Kiểm tra kết nối API |
+
+---
+
+## ⚙️ Cấu hình nâng cao
+
+Chỉnh sửa file `config/gemini.php` hoặc các biến trong `.env`:
+
+```env
+# Model mặc định
+GEMINI_MODEL=gemini-2.0-flash        # Nhanh, tiết kiệm
+# GEMINI_MODEL=gemini-1.5-pro        # Mạnh hơn, chậm hơn
+# GEMINI_MODEL=gemini-1.5-flash      # Cân bằng
+
+# Độ sáng tạo (0.0 = chính xác, 1.0 = sáng tạo)
+GEMINI_TEMPERATURE=0.7
+
+# Giới hạn token đầu ra
+GEMINI_MAX_TOKENS=2048
+```
+
+---
+
+## 📦 Models Gemini hỗ trợ
+
+| Model | Đặc điểm |
+|-------|---------|
+| `gemini-2.0-flash` | Nhanh, hiệu quả — **khuyến nghị** |
+| `gemini-1.5-pro` | Mạnh mẽ, context dài |
+| `gemini-1.5-flash` | Cân bằng tốc độ/chất lượng |
+
+---
+
+## 🛠️ Mở rộng
+
+### Thêm streaming response
+
+Chỉnh sửa `GeminiService::generateContent()` để dùng endpoint `:streamGenerateContent`.
+
+### Lưu lịch sử vào database
+
+1. Tạo migration cho bảng `conversations` và `messages`
+2. Cập nhật `ChatController` để lưu/load history
+3. Thêm authentication nếu cần
+
+### Thêm upload ảnh (Multimodal)
+
+Gemini hỗ trợ gửi ảnh — cập nhật `parts` trong request để thêm `inlineData`.
+
+---
+
+## 📄 License
+
+MIT License — Tự do sử dụng và chỉnh sửa.
