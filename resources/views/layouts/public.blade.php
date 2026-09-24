@@ -160,17 +160,39 @@
     </nav>
 
     <main class="container pb-5">
-        @if (session('status'))
-            <div class="alert alert-success card-soft border-0 mb-4" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i>{{ session('status') }}
-            </div>
-        @endif
-
         @yield('content')
     </main>
 
+    @if (session('status'))
+        <div class="modal fade" id="submissionSuccessModal" tabindex="-1" aria-labelledby="submissionSuccessModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0" style="border-radius: var(--radius-lg)">
+                    <div class="modal-body p-4 p-md-5 text-center">
+                        <i class="bi bi-check-circle-fill fs-1 mb-3" style="color: var(--mint)"></i>
+                        <h2 class="h5 fw-bold mb-2" id="submissionSuccessModalLabel">Nộp bài thành công</h2>
+                        <p class="text-muted-soft mb-4">{{ session('status') }}</p>
+                        <button type="button" class="btn btn-primary-soft" data-bs-dismiss="modal">Đã hiểu</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    @if (session('status'))
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const successModal = document.getElementById('submissionSuccessModal');
+
+                successModal.addEventListener('hidden.bs.modal', () => {
+                    window.location.href = @json(route('public.submissions.create'));
+                });
+
+                bootstrap.Modal.getOrCreateInstance(successModal).show();
+            });
+        </script>
+    @endif
     @stack('scripts')
 </body>
 </html>

@@ -18,8 +18,20 @@
             &nbsp;·&nbsp;<a href="{{ $submission->youtube_url }}" target="_blank">Xem video <i class="bi bi-box-arrow-up-right"></i></a>
         </p>
     </div>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
         <span class="badge-status badge-{{ $submission->status }}">{{ $submission->status }}</span>
+        @if (in_array($submission->status, [\App\Models\Submission::STATUS_PENDING, \App\Models\Submission::STATUS_PROCESSING], true))
+            <div class="d-flex align-items-center gap-3 px-3 py-2 rounded-3 border bg-light small fw-semibold text-muted">
+                <div>
+                    <div class="text-uppercase small text-muted">Đếm ngược</div>
+                    <div id="ai-countdown">01:00</div>
+                </div>
+                <div>
+                    <div class="text-uppercase small text-muted">Đếm xuôi</div>
+                    <div id="ai-elapsed">00:00</div>
+                </div>
+            </div>
+        @endif
         <form method="POST" action="{{ route('admin.submissions.regrade', $submission) }}"
               onsubmit="return confirm('Gửi lại cho Gemini chấm điểm từ đầu? Kết quả hiện tại sẽ bị ghi đè sau khi chấm xong.')">
             @csrf
@@ -28,7 +40,7 @@
     </div>
 </div>
 
-<form method="POST" action="{{ route('admin.submissions.update', $submission) }}">
+<form id="grading-form" method="POST" action="{{ route('admin.submissions.update', $submission) }}">
     @csrf @method('PUT')
 
     <div class="card-soft p-4 mb-4">
@@ -147,3 +159,92 @@
     </div>
 @endif
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const status = '{{ $submission->status }}';
+
+        if (['pending', 'processing'].includes(status)) {
+            let countdown = 60;
+            let elapsed = 0;
+
+            const countdownEl = document.getElementById('ai-countdown');
+            const elapsedEl = document.getElementById('ai-elapsed');
+
+            const format = (seconds) => {
+                const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const sec = (seconds % 60).toString().padStart(2, '0');
+                return min + ':' + sec;
+            };
+
+            const updateTimers = () => {
+                if (countdownEl) countdownEl.textContent = format(Math.max(0, countdown));
+                if (elapsedEl) elapsedEl.textContent = format(elapsed);
+            };
+
+            updateTimers();
+
+            setInterval(() => {
+                countdown = Math.max(0, countdown - 1);
+                elapsed += 1;
+                updateTimers();
+            }, 1000);
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 8000);
+        }
+
+        const gradingForm = document.getElementById('grading-form');
+        if (gradingForm) {
+            gradingForm.addEventListener('submit', function () {
+                const formData = new FormData(gradingForm);
+                const sections = [];
+
+                const pushValue = (label, value) => {
+                    if (value !== null && value !== undefined && String(value).trim() !== '') {
+                        sections.push(label + ': ' + String(value).trim());
+                    }
+                };
+
+                pushValue('Tổng điểm', formData.get('total_score'));
+                pushValue('Nhận định tổng quan', formData.get('judge_score_note'));
+                pushValue('Lỗi mất điểm nhiều nhất', formData.get('critical_error'));
+
+                const rubricFields = [
+                    ['rubric[content][clarity]', 'Content - Clarity'],
+                    ['rubric[content][evidence]', 'Content - Evidence'],
+                    ['rubric[content][originality]', 'Content - Originality'],
+                    ['rubric[strategy][rebuttal]', 'Strategy - Rebuttal'],
+                    ['rubric[strategy][clash]', 'Strategy - Clash'],
+                    ['rubric[strategy][time_management]', 'Strategy - Time Mgmt'],
+                    ['rubric[style][body_language]', 'Style - Body Language'],
+                    ['rubric[style][voice_delivery]', 'Style - Voice & Delivery'],
+                    ['rubric[style][academic_language]', 'Style - Academic Language'],
+                ];
+
+                rubricFields.forEach(([name, label]) => {
+                    const value = formData.get(name);
+                    pushValue(label, value);
+                });
+
+                pushValue('Điểm mạnh nhất', formData.get('strengths'));
+                pushValue('Cần cải thiện', formData.get('improvements'));
+
+                const fileContent = sections.join('\n');
+                const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                const safeTitle = '{{ preg_replace("/[^A-Za-z0-9._-]+/", "_", $submission->title) }}';
+                link.href = url;
+                link.download = safeTitle + '_grading.txt';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            });
+        }
+    });
+</script>
+@endpush

@@ -56,7 +56,7 @@
         <nav>
             <a href="{{ route('admin.dashboard') }}" class="admin-nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                 <i class="bi bi-grid"></i>Tổng quan
-            </a>
+            </a>            
             <a href="{{ route('admin.submissions.index') }}" class="admin-nav-link {{ request()->routeIs('admin.submissions.*') ? 'active' : '' }}">
                 <i class="bi bi-file-earmark-text"></i>Bài nộp
             </a>
@@ -86,6 +86,9 @@
                     <i class="bi bi-clock-history"></i>Thao tác người dùng
                 </a>
             @endif
+            <a href="http://quiz.local/" class="admin-nav-link" target="_blank" rel="noopener noreferrer">
+                <i class="bi bi-clipboard-check"></i>Khu vực chấm điểm
+            </a>
             <form method="POST" action="{{ route('admin.logout') }}" class="mt-3">
                 @csrf
                 <button type="submit" class="admin-nav-link border-0 bg-transparent w-100 text-start">
