@@ -13,6 +13,54 @@ use Throwable;
 class GeminiEvaluationService
 {
     /**
+     * @return array{title: string, student_name: string}
+     */
+    public function inspectYoutube(string $youtubeUrl): array
+    {
+        $provider = AiProvider::query()
+            ->where('provider', 'gemini')
+            ->where('is_enabled', true)
+            ->first();
+
+        $model = $provider?->model ?: config('services.gemini.model', 'gemini-2.5-pro');
+        $keys = $this->apiKeys($provider);
+
+        if ($keys === []) {
+            throw new RuntimeException('Chưa cấu hình GEMINI_API_KEY hoặc API key Gemini trong phần quản trị.');
+        }
+
+        $failureReasons = [];
+
+        foreach ($keys as $keyIndex => $apiKey) {
+            try {
+                $response = $this->requestYoutubeInspection($apiKey, $model, $youtubeUrl);
+                $rawText = data_get($response, 'candidates.0.content.parts.0.text');
+
+                if (! is_string($rawText) || trim($rawText) === '') {
+                    throw new RuntimeException('Gemini không trả về thông tin video.');
+                }
+
+                $result = $this->parseJson($rawText);
+                $title = trim($this->stringValue($result['title'] ?? ''));
+                $studentName = trim($this->stringValue($result['student_name'] ?? ''));
+
+                if ($title === '' || $studentName === '') {
+                    throw new RuntimeException('Gemini không nhận diện được tiêu đề hoặc tên học sinh trong video.');
+                }
+
+                return ['title' => $title, 'student_name' => $studentName];
+            } catch (RuntimeException $exception) {
+                $failureReasons[] = 'Key '.($keyIndex + 1).': '.$this->failureReason($exception);
+            }
+        }
+
+        throw new RuntimeException(
+            "Gemini không phân tích được video. Đã kiểm tra lần lượt các API key:\n- "
+            .implode("\n- ", $failureReasons)
+        );
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function evaluate(Submission $submission): array
@@ -22,33 +70,90 @@ class GeminiEvaluationService
             ->where('is_enabled', true)
             ->first();
 
-        $apiKey = $provider?->api_key ?: config('services.gemini.key');
         $model = $provider?->model ?: config('services.gemini.model', 'gemini-2.5-pro');
+        $keys = $this->apiKeys($provider);
 
-        if (! $apiKey) {
-            throw new RuntimeException('Chưa cấu hình GEMINI_API_KEY hoặc API key Gemini trong Quản lý AI.');
+        if ($keys === []) {
+            throw new RuntimeException('Chưa cấu hình GEMINI_API_KEY, GEMINI_API_KEY_1 hoặc GEMINI_API_KEY_2.');
         }
 
-        $response = $this->request($apiKey, $model, $this->prompt($submission));
-        $rawText = data_get($response, 'candidates.0.content.parts.0.text');
+        $lastError = null;
 
-        if (! is_string($rawText) || trim($rawText) === '') {
-            throw new RuntimeException('Gemini không trả về nội dung chấm điểm.');
+        foreach ($keys as $apiKey) {
+            try {
+                $response = $this->request($apiKey, $model, $this->prompt($submission));
+                $rawText = data_get($response, 'candidates.0.content.parts.0.text');
+
+                if (! is_string($rawText) || trim($rawText) === '') {
+                    throw new RuntimeException('Gemini không trả về nội dung chấm điểm.');
+                }
+
+                $evaluation = $this->parseJson($rawText);
+
+                return [
+                    'total_score' => $this->integerValue($evaluation['total_score'] ?? null, 0, 100),
+                    'rubric_scores' => $this->rubricScores($evaluation['rubric_scores'] ?? []),
+                    'judge_score_note' => $this->stringValue($evaluation['judge_score_note'] ?? ''),
+                    'strengths' => $this->stringList($evaluation['strengths'] ?? []),
+                    'improvements' => $this->stringList($evaluation['improvements'] ?? []),
+                    'critical_error' => $this->stringValue($evaluation['critical_error'] ?? ''),
+                    'diagnosis' => $this->diagnosis($evaluation['diagnosis'] ?? []),
+                    'coaching_plan' => is_array($evaluation['coaching_plan'] ?? null) ? $evaluation['coaching_plan'] : [],
+                    'raw_ai_response' => $rawText,
+                ];
+            } catch (RuntimeException $exception) {
+                $lastError = $exception;
+
+                if (! $this->shouldRetryWithNextKey($exception->getMessage())) {
+                    throw $exception;
+                }
+            }
         }
 
-        $evaluation = $this->parseJson($rawText);
+        throw $lastError ?? new RuntimeException('Gemini không thể chấm điểm sau khi thử toàn bộ API key.');
+    }
 
-        return [
-            'total_score' => $this->integerValue($evaluation['total_score'] ?? null, 0, 100),
-            'rubric_scores' => $this->rubricScores($evaluation['rubric_scores'] ?? []),
-            'judge_score_note' => $this->stringValue($evaluation['judge_score_note'] ?? ''),
-            'strengths' => $this->stringList($evaluation['strengths'] ?? []),
-            'improvements' => $this->stringList($evaluation['improvements'] ?? []),
-            'critical_error' => $this->stringValue($evaluation['critical_error'] ?? ''),
-            'diagnosis' => $this->diagnosis($evaluation['diagnosis'] ?? []),
-            'coaching_plan' => is_array($evaluation['coaching_plan'] ?? null) ? $evaluation['coaching_plan'] : [],
-            'raw_ai_response' => $rawText,
-        ];
+    /**
+     * @return array<int, string>
+     */
+    private function apiKeys(?AiProvider $provider): array
+    {
+        $keys = [];
+
+        foreach (['GEMINI_API_KEY', 'GEMINI_API_KEY_1', 'GEMINI_API_KEY_2'] as $envKey) {
+            $value = trim((string) env($envKey, ''));
+            if ($value !== '') {
+                $keys[] = $value;
+            }
+        }
+
+        if ($provider?->api_key) {
+            $keys[] = $provider->api_key;
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    private function shouldRetryWithNextKey(string $message): bool
+    {
+        return str_contains(strtolower($message), '429')
+            || str_contains(strtolower($message), 'quota')
+            || str_contains(strtolower($message), 'exceeded your current quota');
+    }
+
+    private function failureReason(RuntimeException $exception): string
+    {
+        $message = strtolower($exception?->getMessage() ?? '');
+
+        if (str_contains($message, '429') || str_contains($message, 'quota')) {
+            return 'hết quota';
+        }
+
+        if (str_contains($message, 'kết nối') || str_contains($message, 'timeout')) {
+            return 'không kết nối được';
+        }
+
+        return 'lỗi API';
     }
 
     /**
@@ -84,6 +189,49 @@ class GeminiEvaluationService
                 ]);
         } catch (Throwable $exception) {
             throw new RuntimeException('Không thể kết nối đến Gemini.', 0, $exception);
+        }
+
+        if ($response->failed()) {
+            $message = data_get($response->json(), 'error.message');
+            $detail = is_string($message) && $message !== '' ? ': '.$message : '';
+
+            throw new RuntimeException('Gemini trả về lỗi HTTP '.$response->status().$detail);
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Gemini can inspect a public YouTube video when it is sent as video file data.
+     *
+     * @return array<string, mixed>
+     */
+    private function requestYoutubeInspection(string $apiKey, string $model, string $youtubeUrl): array
+    {
+        try {
+            $response = Http::acceptJson()
+                ->asJson()
+                ->withQueryParameters(['key' => $apiKey])
+                ->connectTimeout(5)
+                ->timeout(60)
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
+                    'contents' => [[
+                        'parts' => [
+                            ['text' => 'Phân tích video YouTube này và chỉ trả về JSON hợp lệ với đúng hai trường: title là tiêu đề/chủ đề ngắn gọn của bài nói, student_name là tên học sinh được giới thiệu trong video. Nếu không nghe rõ tên, dùng chuỗi "" cho student_name. Không thêm markdown.'],
+                            ['file_data' => [
+                                'mime_type' => 'video/mp4',
+                                'file_uri' => $youtubeUrl,
+                            ]],
+                        ],
+                    ]],
+                    'generationConfig' => [
+                        'temperature' => 0.2,
+                        'maxOutputTokens' => 256,
+                        'responseMimeType' => 'application/json',
+                    ],
+                ]);
+        } catch (Throwable $exception) {
+            throw new RuntimeException('Không thể kết nối đến Gemini để phân tích video.', 0, $exception);
         }
 
         if ($response->failed()) {

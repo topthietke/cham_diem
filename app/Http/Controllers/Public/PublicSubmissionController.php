@@ -8,7 +8,9 @@ use App\Jobs\EvaluateSubmissionJob;
 use App\Models\ParentModel;
 use App\Models\Student;
 use App\Models\Submission;
+use App\Services\GeminiEvaluationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PublicSubmissionController extends Controller
@@ -16,6 +18,31 @@ class PublicSubmissionController extends Controller
     public function create(): View
     {
         return view('public.submissions.create');
+    }
+
+    public function test(): View
+    {
+        return view('public.submissions.test');
+    }
+
+    public function inspectYoutube(Request $request, GeminiEvaluationService $gemini)
+    {
+        $validated = $request->validate([
+            'youtube_url' => [
+                'required', 'url', 'max:255',
+                'regex:/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i',
+            ],
+        ], [
+            'youtube_url.regex' => 'Vui lòng nhập đúng đường dẫn video YouTube.',
+        ]);
+
+        try {
+            return response()->json($gemini->inspectYoutube($validated['youtube_url']));
+        } catch (\RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'youtube_url' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function store(StoreSubmissionRequest $request)

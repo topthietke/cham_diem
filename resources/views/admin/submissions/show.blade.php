@@ -20,18 +20,6 @@
     </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
         <span class="badge-status badge-{{ $submission->status }}">{{ $submission->status }}</span>
-        @if (in_array($submission->status, [\App\Models\Submission::STATUS_PENDING, \App\Models\Submission::STATUS_PROCESSING], true))
-            <div class="d-flex align-items-center gap-3 px-3 py-2 rounded-3 border bg-light small fw-semibold text-muted">
-                <div>
-                    <div class="text-uppercase small text-muted">Đếm ngược</div>
-                    <div id="ai-countdown">01:00</div>
-                </div>
-                <div>
-                    <div class="text-uppercase small text-muted">Đếm xuôi</div>
-                    <div id="ai-elapsed">00:00</div>
-                </div>
-            </div>
-        @endif
         <form method="POST" action="{{ route('admin.submissions.regrade', $submission) }}"
               onsubmit="return confirm('Gửi lại cho Gemini chấm điểm từ đầu? Kết quả hiện tại sẽ bị ghi đè sau khi chấm xong.')">
             @csrf
@@ -166,31 +154,6 @@
         const status = '{{ $submission->status }}';
 
         if (['pending', 'processing'].includes(status)) {
-            let countdown = 60;
-            let elapsed = 0;
-
-            const countdownEl = document.getElementById('ai-countdown');
-            const elapsedEl = document.getElementById('ai-elapsed');
-
-            const format = (seconds) => {
-                const min = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const sec = (seconds % 60).toString().padStart(2, '0');
-                return min + ':' + sec;
-            };
-
-            const updateTimers = () => {
-                if (countdownEl) countdownEl.textContent = format(Math.max(0, countdown));
-                if (elapsedEl) elapsedEl.textContent = format(elapsed);
-            };
-
-            updateTimers();
-
-            setInterval(() => {
-                countdown = Math.max(0, countdown - 1);
-                elapsed += 1;
-                updateTimers();
-            }, 1000);
-
             setTimeout(() => {
                 window.location.reload();
             }, 8000);

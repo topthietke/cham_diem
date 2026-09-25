@@ -18,5 +18,10 @@ Route::prefix('nop-bai')->name('public.')->group(function () {
     Route::post('/bai-nop/{submission}/feedback', [PublicFeedbackController::class, 'store'])->name('feedback.store');
 });
 
+Route::prefix('nop-bai-test')->name('public.submissions.test.')->group(function () {
+    Route::get('/', [PublicSubmissionController::class, 'test'])->name('create');
+    Route::post('/phan-tich-youtube', [PublicSubmissionController::class, 'inspectYoutube'])->name('inspect');
+});
+
 // Trang chủ tạm thời trỏ về form nộp bài
 Route::redirect('/', '/nop-bai');
