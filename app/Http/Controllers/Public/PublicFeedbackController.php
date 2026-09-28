@@ -15,6 +15,12 @@ class PublicFeedbackController extends Controller
         $data = $request->validated();
         $parent = $submission->student->parent;
 
+        if ($parent === null) {
+            return back()
+                ->withErrors(['phone' => 'Bài nộp này chưa được gán phụ huynh để xác minh số điện thoại.'])
+                ->withInput();
+        }
+
         // Xác thực đơn giản: SĐT nhập vào phải khớp phụ huynh của bài nộp này,
         // vì trang phụ huynh không yêu cầu đăng nhập.
         if ($parent->phone !== $data['phone']) {

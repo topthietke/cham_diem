@@ -13,7 +13,7 @@ use Throwable;
 class GeminiEvaluationService
 {
     /**
-     * @return array{title: string, student_name: string}
+    * @return array{title: string, student_name: string, channel_title: string}
      */
     public function inspectYoutube(string $youtubeUrl): array
     {
@@ -44,11 +44,17 @@ class GeminiEvaluationService
                 $title = trim($this->stringValue($result['title'] ?? ''));
                 $studentName = trim($this->stringValue($result['student_name'] ?? ''));
 
-                if ($title === '' || $studentName === '') {
-                    throw new RuntimeException('Gemini không nhận diện được tiêu đề hoặc tên học sinh trong video.');
+                if ($studentName === '') {
+                    throw new RuntimeException('Gemini không nhận diện được tên học sinh trong video.');
                 }
 
-                return ['title' => $title, 'student_name' => $studentName];
+                $youtubeMetadata = $this->youtubeMetadata($youtubeUrl);
+
+                return [
+                    'title' => $youtubeMetadata['title'] ?: $title,
+                    'student_name' => $studentName,
+                    'channel_title' => $youtubeMetadata['channel_title'],
+                ];
             } catch (RuntimeException $exception) {
                 $failureReasons[] = 'Key '.($keyIndex + 1).': '.$this->failureReason($exception);
             }
@@ -217,7 +223,7 @@ class GeminiEvaluationService
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
                     'contents' => [[
                         'parts' => [
-                            ['text' => 'Phân tích video YouTube này và chỉ trả về JSON hợp lệ với đúng hai trường: title là tiêu đề/chủ đề ngắn gọn của bài nói, student_name là tên học sinh được giới thiệu trong video. Nếu không nghe rõ tên, dùng chuỗi "" cho student_name. Không thêm markdown.'],
+                            ['text' => 'Nghe phần tự giới thiệu ở đầu video để nhận diện chính xác tên học sinh. Chỉ trả về JSON hợp lệ với đúng hai trường: title là tiêu đề/chủ đề ngắn gọn của bài nói, student_name là tên học sinh được giới thiệu. Nếu không nghe rõ tên, dùng chuỗi "" cho student_name. Không thêm markdown.'],
                             ['file_data' => [
                                 'mime_type' => 'video/mp4',
                                 'file_uri' => $youtubeUrl,
@@ -242,6 +248,31 @@ class GeminiEvaluationService
         }
 
         return $response->json();
+    }
+
+    /** @return array{title: string, channel_title: string} */
+    private function youtubeMetadata(string $youtubeUrl): array
+    {
+        try {
+            $response = Http::acceptJson()
+                ->connectTimeout(5)
+                ->timeout(10)
+                ->get('https://www.youtube.com/oembed', [
+                    'url' => $youtubeUrl,
+                    'format' => 'json',
+                ]);
+
+            if ($response->successful()) {
+                return [
+                    'title' => $this->stringValue($response->json('title')),
+                    'channel_title' => $this->stringValue($response->json('author_name')),
+                ];
+            }
+        } catch (Throwable) {
+            // Fall back to Gemini's title if YouTube metadata is unavailable.
+        }
+
+        return ['title' => '', 'channel_title' => ''];
     }
 
     private function prompt(Submission $submission): string

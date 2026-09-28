@@ -15,7 +15,8 @@
         </div>
         <div class="mb-4">
             <label class="form-label fw-semibold">Phụ huynh</label>
-            <select name="parent_id" class="form-select @error('parent_id') is-invalid @enderror" required>
+            <select name="parent_id" class="form-select @error('parent_id') is-invalid @enderror">
+                <option value="" @selected(old('parent_id', $student->parent_id) === null)>Không có phụ huynh</option>
                 @foreach ($parents as $parent)
                     <option value="{{ $parent->id }}" @selected(old('parent_id', $student->parent_id) == $parent->id)>
                         {{ $parent->name }} — {{ $parent->phone }}

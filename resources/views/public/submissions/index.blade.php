@@ -56,7 +56,7 @@
                                     <tr>
                                         <td class="ps-4">
                                             <div class="fw-semibold">{{ $submission->student->name }}</div>
-                                            <div class="text-muted-soft small">{{ $submission->student->parent->phone }}</div>
+                                            <div class="text-muted-soft small">{{ $submission->student->parent?->phone ?? '—' }}</div>
                                         </td>
                                         <td>{{ $submission->title }}</td>
                                         <td>

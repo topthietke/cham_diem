@@ -14,7 +14,7 @@
     <div>
         <h1 class="h4 fw-bold mb-1">{{ $submission->title }}</h1>
         <p class="text-muted mb-0">
-            {{ $submission->student->name }} · {{ $submission->student->parent->name }} ({{ $submission->student->parent->phone }})
+            {{ $submission->student->name }} · {{ $submission->student->parent?->name ?? 'Chưa gán phụ huynh' }} ({{ $submission->student->parent?->phone ?? '—' }})
             &nbsp;·&nbsp;<a href="{{ $submission->youtube_url }}" target="_blank">Xem video <i class="bi bi-box-arrow-up-right"></i></a>
         </p>
     </div>

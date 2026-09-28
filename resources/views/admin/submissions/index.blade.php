@@ -28,7 +28,7 @@
                     <tr>
                         <td class="ps-4">
                             <div class="fw-semibold">{{ $submission->student->name }}</div>
-                            <div class="text-muted small">{{ $submission->student->parent->phone }}</div>
+                            <div class="text-muted small">{{ $submission->student->parent?->phone ?? '—' }}</div>
                         </td>
                         <td>{{ $submission->title }}</td>
                         <td><span class="badge-status badge-{{ $submission->status }}">{{ $submission->status }}</span></td>

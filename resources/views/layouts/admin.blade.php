@@ -29,7 +29,7 @@
         }
         .admin-nav-link:hover { background: var(--primary-soft); color: var(--primary-dark); }
         .admin-nav-link.active { background: var(--primary); color: #fff; }
-        .card-soft { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 6px 20px rgba(108,99,255,.06); }
+        .card-soft { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 6px 20px rgba(108,99,255,.06); }
         .btn-primary-soft { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; border-radius: 10px; }
         .btn-primary-soft:hover { background: var(--primary-dark); border-color: var(--primary-dark); color: #fff; }
         .btn-outline-soft { border-radius: 10px; border: 1.5px solid var(--border); color: var(--text); font-weight: 600; }

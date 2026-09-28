@@ -21,8 +21,8 @@
                 @foreach ($students as $student)
                     <tr>
                         <td class="ps-4 fw-semibold">{{ $student->name }}</td>
-                        <td>{{ $student->parent->name }}</td>
-                        <td>{{ $student->parent->phone }}</td>
+                        <td>{{ $student->parent?->name ?? 'Chưa gán' }}</td>
+                        <td>{{ $student->parent?->phone ?? '—' }}</td>
                         <td>{{ $student->submissions_count }}</td>
                         <td class="pe-4 text-end">
                             <a href="{{ route('admin.students.edit', $student) }}" class="btn btn-outline-soft btn-sm">Sửa</a>

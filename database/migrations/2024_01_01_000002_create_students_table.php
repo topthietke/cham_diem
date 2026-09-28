@@ -10,10 +10,9 @@ return new class extends Migration
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('parent_id')->constrained('parents')->cascadeOnDelete();
+            $table->foreignId('parent_id')->nullable()->constrained('parents')->cascadeOnDelete();
             $table->string('name');
             $table->timestamps();
-
             $table->index(['parent_id', 'name']); // Tra cứu học sinh theo phụ huynh + tên
         });
     }

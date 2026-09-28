@@ -85,7 +85,7 @@
                     $url.addClass('is-invalid');
                     $error.text(message);
                 }).always(function () {
-                    $button.prop('disabled', false).html('<i class="bi bi-stars me-1"></i>Phân tích bằng Gemini');
+                    $button.prop('disabled', false).html('<i class="bi bi-stars me-1"></i>Nộp bài');
                 });
             });
         });

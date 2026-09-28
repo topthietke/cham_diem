@@ -14,8 +14,9 @@ class StoreSubmissionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'parent_name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:20', 'regex:/^[0-9+\s-]{8,20}$/'],
+            'parent_info' => ['sometimes', 'boolean'],
+            'parent_name' => ['required_if:parent_info,1', 'nullable', 'string', 'max:255'],
+            'phone' => ['required_if:parent_info,1', 'nullable', 'string', 'max:20', 'regex:/^[0-9+\s-]{8,20}$/'],
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'student_name' => ['required', 'string', 'max:255'],

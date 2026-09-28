@@ -39,7 +39,7 @@ class StudentController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'parent_id' => ['required', 'exists:parents,id'],
+            'parent_id' => ['nullable', 'exists:parents,id'],
         ]);
 
         $student->update($data);

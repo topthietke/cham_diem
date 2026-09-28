@@ -49,27 +49,29 @@ class PublicSubmissionController extends Controller
     {
         $data = $request->validated();
 
-        // Tra theo SĐT: nếu phụ huynh đã tồn tại -> link, chưa có -> tạo mới
-        $parent = ParentModel::firstOrCreate(
-            ['phone' => $data['phone']],
-            [
-                'name' => $data['parent_name'],
-                'email' => $data['email'] ?? null,
-                'address' => $data['address'] ?? null,
-            ]
-        );
+        $parent = null;
 
-        // Nếu phụ huynh đã tồn tại từ trước, cập nhật nhẹ các trường mới được điền thêm
-        if (! $parent->wasRecentlyCreated) {
-            $parent->fill(array_filter([
-                'email' => $data['email'] ?? null,
-                'address' => $data['address'] ?? null,
-            ]))->save();
+        if ($request->boolean('parent_info')) {
+            $parent = ParentModel::firstOrCreate(
+                ['phone' => $data['phone']],
+                [
+                    'name' => $data['parent_name'],
+                    'email' => $data['email'] ?? null,
+                    'address' => $data['address'] ?? null,
+                ]
+            );
+
+            if (! $parent->wasRecentlyCreated) {
+                $parent->fill(array_filter([
+                    'email' => $data['email'] ?? null,
+                    'address' => $data['address'] ?? null,
+                ]))->save();
+            }
         }
 
         // Tạo học sinh nếu chưa có (cùng phụ huynh + cùng tên)
         $student = Student::firstOrCreate([
-            'parent_id' => $parent->id,
+            'parent_id' => $parent?->id,
             'name' => $data['student_name'],
         ]);
 

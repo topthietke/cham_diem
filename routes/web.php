@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('nop-bai')->name('public.')->group(function () {
     Route::get('/', [PublicSubmissionController::class, 'create'])->name('submissions.create');
     Route::post('/', [PublicSubmissionController::class, 'store'])->name('submissions.store');
+    Route::post('/phan-tich-youtube', [PublicSubmissionController::class, 'inspectYoutube'])->name('submissions.inspect');
     Route::get('/tra-cuu', [PublicSubmissionController::class, 'index'])->name('submissions.index');
     Route::get('/bai-nop/{submission}', [PublicSubmissionController::class, 'show'])->name('submissions.show');
     Route::post('/bai-nop/{submission}/feedback', [PublicFeedbackController::class, 'store'])->name('feedback.store');

@@ -94,7 +94,7 @@
         }
 
         .form-control, .form-select {
-            border-radius: 10px;
+            border-radius: 6px;
             border: 1.5px solid var(--border);
             padding: 0.6rem 0.9rem;
         }
