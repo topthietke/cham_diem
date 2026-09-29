@@ -311,11 +311,48 @@ PROMPT;
         $text = trim(preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $text) ?? $text);
         $data = json_decode($text, true);
 
-        if (! is_array($data)) {
-            throw new RuntimeException('Gemini trả về JSON không hợp lệ.');
+        if (is_array($data)) {
+            return $data;
         }
 
-        return $data;
+        $start = strpos($text, '{');
+        if ($start !== false) {
+            $depth = 0;
+            $inString = false;
+            $escaped = false;
+
+            for ($index = $start, $length = strlen($text); $index < $length; $index++) {
+                $character = $text[$index];
+
+                if ($inString) {
+                    if ($escaped) {
+                        $escaped = false;
+                    } elseif ($character === '\\') {
+                        $escaped = true;
+                    } elseif ($character === '"') {
+                        $inString = false;
+                    }
+
+                    continue;
+                }
+
+                if ($character === '"') {
+                    $inString = true;
+                } elseif ($character === '{') {
+                    $depth++;
+                } elseif ($character === '}' && --$depth === 0) {
+                    $data = json_decode(substr($text, $start, $index - $start + 1), true);
+
+                    if (is_array($data)) {
+                        return $data;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        throw new RuntimeException('Gemini trả về JSON không hợp lệ: '.json_last_error_msg());
     }
 
     private function integerValue(mixed $value, int $min, int $max): int

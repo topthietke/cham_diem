@@ -36,7 +36,7 @@ class GeminiFallbackTest extends TestCase
                     [
                         'content' => [
                             'parts' => [
-                                ['text' => json_encode([
+                                ['text' => "Đây là kết quả đánh giá:\n".json_encode([
                                     'total_score' => 88,
                                     'rubric_scores' => [
                                         'content' => ['clarity' => 12, 'evidence' => 13, 'originality' => 8, 'note' => 'Good'],
@@ -49,7 +49,7 @@ class GeminiFallbackTest extends TestCase
                                     'critical_error' => 'None',
                                     'diagnosis' => ['content' => 4, 'strategy' => 4, 'delivery' => 5, 'rebuttal' => 4, 'level' => 'Developing'],
                                     'coaching_plan' => ['week_1_2' => 'Practice', 'week_3' => 'Refine', 'week_4' => 'Review'],
-                                ])],
+                                ])."\nHoàn tất."],
                             ],
                         ],
                     ],

@@ -23,7 +23,7 @@
         <form method="POST" action="{{ route('admin.submissions.regrade', $submission) }}"
               onsubmit="return confirm('Gửi lại cho Gemini chấm điểm từ đầu? Kết quả hiện tại sẽ bị ghi đè sau khi chấm xong.')">
             @csrf
-            <button class="btn btn-outline-soft btn-sm"><i class="bi bi-arrow-repeat me-1"></i>AI chấm lại</button>
+            <button class="btn btn-outline-soft btn-sm"><i class="bi bi-arrow-repeat me-1"></i>Chấm điểm bằng AI</button>
         </form>
     </div>
 </div>
