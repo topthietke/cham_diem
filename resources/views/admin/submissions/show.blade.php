@@ -14,7 +14,14 @@
     <div>
         <h1 class="h4 fw-bold mb-1">{{ $submission->title }}</h1>
         <p class="text-muted mb-0">
-            {{ $submission->student->name }} · {{ $submission->student->parent?->name ?? 'Chưa gán phụ huynh' }} ({{ $submission->student->parent?->phone ?? '—' }})
+            {{ $submission->student->name }} ·
+            @if ($submission->student->parent)
+                <i class="bi bi-person-fill text-success" aria-hidden="true"></i>
+                {{ $submission->student->parent->name }} ({{ $submission->student->parent->phone ?? '—' }})
+            @else
+                <i class="bi bi-person-fill text-danger" aria-hidden="true"></i>
+                (Chưa có)
+            @endif
             &nbsp;·&nbsp;<a href="{{ $submission->youtube_url }}" target="_blank">Xem video <i class="bi bi-box-arrow-up-right"></i></a>
         </p>
     </div>
@@ -131,6 +138,12 @@
     <button type="submit" class="btn btn-primary-soft px-4">Lưu chấm điểm thủ công</button>
 </form>
 
+@if ($e)
+    <a class="btn btn-outline-soft mt-2" href="{{ route('admin.submissions.download', $submission) }}">
+        <i class="bi bi-download me-1"></i>Tải kết quả TXT
+    </a>
+@endif
+
 @if ($submission->feedbacks->isNotEmpty())
     <div class="card-soft p-4 mt-4">
         <h2 class="h6 fw-bold mb-3">Phản hồi từ phụ huynh</h2>
@@ -159,55 +172,6 @@
             }, 8000);
         }
 
-        const gradingForm = document.getElementById('grading-form');
-        if (gradingForm) {
-            gradingForm.addEventListener('submit', function () {
-                const formData = new FormData(gradingForm);
-                const sections = [];
-
-                const pushValue = (label, value) => {
-                    if (value !== null && value !== undefined && String(value).trim() !== '') {
-                        sections.push(label + ': ' + String(value).trim());
-                    }
-                };
-
-                pushValue('Tổng điểm', formData.get('total_score'));
-                pushValue('Nhận định tổng quan', formData.get('judge_score_note'));
-                pushValue('Lỗi mất điểm nhiều nhất', formData.get('critical_error'));
-
-                const rubricFields = [
-                    ['rubric[content][clarity]', 'Content - Clarity'],
-                    ['rubric[content][evidence]', 'Content - Evidence'],
-                    ['rubric[content][originality]', 'Content - Originality'],
-                    ['rubric[strategy][rebuttal]', 'Strategy - Rebuttal'],
-                    ['rubric[strategy][clash]', 'Strategy - Clash'],
-                    ['rubric[strategy][time_management]', 'Strategy - Time Mgmt'],
-                    ['rubric[style][body_language]', 'Style - Body Language'],
-                    ['rubric[style][voice_delivery]', 'Style - Voice & Delivery'],
-                    ['rubric[style][academic_language]', 'Style - Academic Language'],
-                ];
-
-                rubricFields.forEach(([name, label]) => {
-                    const value = formData.get(name);
-                    pushValue(label, value);
-                });
-
-                pushValue('Điểm mạnh nhất', formData.get('strengths'));
-                pushValue('Cần cải thiện', formData.get('improvements'));
-
-                const fileContent = sections.join('\n');
-                const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                const safeTitle = '{{ preg_replace("/[^A-Za-z0-9._-]+/", "_", $submission->title) }}';
-                link.href = url;
-                link.download = safeTitle + '_grading.txt';
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-            });
-        }
     });
 </script>
 @endpush

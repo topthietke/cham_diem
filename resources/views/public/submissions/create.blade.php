@@ -4,33 +4,35 @@
 
 @section('content')
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-12">
         <div class="mb-4">
             <h3 class="fw-bold mb-1">Thông tin bài thi</h3>
         </div>
-
         <div class="card-soft p-4">
             <form method="POST" action="{{ route('public.submissions.store') }}"
                 data-inspect-url="{{ route('public.submissions.inspect') }}" novalidate>
                 @csrf
                 <div class="mb-4">                    
                     <div class="row align-items-end mb-3">
-                        <div class="col-lg-10 col-md-9 col-sm-12 mb-3 mb-md-0">
+                        <div class="col-lg-10 col-md-9 col-sm-12">
                             <h6 class="form-label d-flex align-items-center" for="youtube_url">
                                 <i class="bi bi-youtube fs-3 text-danger"></i>                                
                                 <span class="ms-2">Liên kết YouTube</span>
                             </h6>
-                            <input id="youtube_url" type="url" name="youtube_url" value="{{ old('youtube_url') }}"
-                                   class="form-control @error('youtube_url') is-invalid @enderror"
-                                   placeholder="https://www.youtube.com/watch?v=...">
+                            <input id="youtube_url" type="url" name="youtube_url" value="{{ old('youtube_url') }}" class="form-control @error('youtube_url') is-invalid @enderror" placeholder="https://www.youtube.com/watch?v=...">
                             @error('youtube_url')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-lg-2 col-md-3 col-sm-12 mb-3 mb-md-0">
-                            <button type="submit" class="btn btn-primary w-100 py-2">
+                        <div class="col-lg-2 col-md-3 col-sm-12">
+                            <button type="submit" class="btn btn-submit w-100 py-2">
                                 <i class="bi bi-send-check me-1"></i>
                                 Nộp bài
                             </button>
                         </div>
+                    </div>
+                    <div class="row align-items-end mb-3">
+                        <div class="col-lg-12 col-md-12 col-sm-12">                          
+                            @error('youtube_url')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>                        
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -98,6 +100,35 @@
 
 @push('styles')
     <style>
+        .btn-submit {
+            min-height: 45px;
+            border: 0;
+            border-radius:5px;
+            background: linear-gradient(120deg, #6259e8 0%, #278e9b 100%);
+            box-shadow: 0 5px 12px rgba(70, 91, 190, 0.22);
+            color: #fff;
+            font-weight: 700;
+            transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            color: #fff;
+            filter: brightness(1.06);
+            transform: translateY(-1px);
+            box-shadow: 0 7px 16px rgba(70, 91, 190, 0.3);
+        }
+
+        .btn-submit:focus-visible {
+            color: #fff;
+            outline: 3px solid rgba(63, 214, 191, 0.45);
+            outline-offset: 2px;
+        }
+
+        .btn-submit:disabled {
+            color: #fff;
+            opacity: 0.8;
+        }
+
         .validation-error {
             display: block;
             color: #dc3545;
@@ -218,7 +249,8 @@
                 }
 
                 const youtubeUrl = $.trim($form.find('[name="youtube_url"]').val());
-                if (youtubeUrl !== '' && !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(youtubeUrl)) {
+                const validYoutubeUrl = /^https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]+(?:[?&][^\s]*)?$/i;
+                if (youtubeUrl !== '' && !validYoutubeUrl.test(youtubeUrl)) {
                     showError($form.find('[name="youtube_url"]'), 'Vui lòng nhập đúng đường dẫn video YouTube.');
                     $firstInvalidField = $firstInvalidField.length ? $firstInvalidField : $form.find('[name="youtube_url"]');
                     isValid = false;

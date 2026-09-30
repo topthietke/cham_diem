@@ -28,7 +28,15 @@
                     <tr>
                         <td class="ps-4">
                             <div class="fw-semibold">{{ $submission->student->name }}</div>
-                            <div class="text-muted small">{{ $submission->student->parent?->phone ?? '—' }}</div>
+                            <div class="text-muted small">
+                                @if ($submission->student->parent)
+                                    <i class="bi bi-person-fill text-success" aria-hidden="true"></i>
+                                    {{ $submission->student->parent->name }}
+                                @else
+                                    <i class="bi bi-person-fill text-danger" aria-hidden="true"></i>
+                                    (Chưa có)
+                                @endif
+                            </div>
                         </td>
                         <td>{{ $submission->title }}</td>
                         <td><span class="badge-status badge-{{ $submission->status }}">{{ $submission->status }}</span></td>

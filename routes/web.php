@@ -50,6 +50,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('submissions', [SubmissionController::class, 'index'])->name('submissions.index');
         Route::get('submissions/{submission}', [SubmissionController::class, 'show'])->name('submissions.show');
         Route::put('submissions/{submission}', [SubmissionController::class, 'update'])->name('submissions.update');
+        Route::get('submissions/{submission}/download', [SubmissionController::class, 'download'])->name('submissions.download');
         Route::post('submissions/{submission}/regrade', [SubmissionController::class, 'regrade'])->name('submissions.regrade');
 
         Route::get('feedbacks', [FeedbackController::class, 'index'])->name('feedbacks.index');

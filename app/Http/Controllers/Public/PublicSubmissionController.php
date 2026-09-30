@@ -30,7 +30,7 @@ class PublicSubmissionController extends Controller
         $validated = $request->validate([
             'youtube_url' => [
                 'required', 'url', 'max:255',
-                'regex:/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i',
+                'regex:/^https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]+(?:[?&][^\s]*)?$/i',
             ],
         ], [
             'youtube_url.regex' => 'Vui lòng nhập đúng đường dẫn video YouTube.',

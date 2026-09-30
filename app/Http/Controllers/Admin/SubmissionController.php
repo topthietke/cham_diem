@@ -96,7 +96,75 @@ class SubmissionController extends Controller
 
         $submission->update(['status' => Submission::STATUS_GRADED]);
 
-        return back()->with('status', 'Đã lưu kết quả chấm điểm thủ công.');
+        return back()
+            ->with('status', 'Đã lưu kết quả chấm điểm thủ công.')
+            ->with('grading_saved', true);
+    }
+
+    public function download(Submission $submission)
+    {
+        $submission->load(['student', 'evaluation']);
+        $evaluation = $submission->evaluation;
+        abort_unless($evaluation, 404);
+
+        $rubric = $evaluation->rubric_scores ?? [];
+        $diagnosis = $evaluation->diagnosis ?? [];
+        $coachingPlan = $evaluation->coaching_plan ?? [];
+        $rubricGroups = [
+            'Content' => ['clarity' => 'Clarity', 'evidence' => 'Evidence', 'originality' => 'Originality'],
+            'Strategy' => ['rebuttal' => 'Rebuttal', 'clash' => 'Clash', 'time_management' => 'Time Management'],
+            'Style' => ['body_language' => 'Body Language', 'voice_delivery' => 'Voice & Delivery', 'academic_language' => 'Academic Language'],
+        ];
+
+        $lines = [
+            'Bài nộp: '.$submission->title,
+            'Học sinh: '.$submission->student->name,
+            'Video: '.$submission->youtube_url,
+            '',
+            'JUDGE SCORE',
+            'Tổng điểm: '.$evaluation->total_score,
+            'Nhận định tổng quan: '.($evaluation->judge_score_note ?: '—'),
+            '',
+            'RUBRIC CHI TIẾT',
+        ];
+
+        foreach ($rubricGroups as $groupKey => $items) {
+            $lines[] = $groupKey.':';
+            foreach ($items as $itemKey => $label) {
+                $lines[] = '  '.$label.': '.data_get($rubric, strtolower($groupKey).'.'.$itemKey, '—');
+            }
+            $lines[] = '  Ghi chú: '.(data_get($rubric, strtolower($groupKey).'.note') ?: '—');
+        }
+
+        $lines = array_merge($lines, [
+            '',
+            'Điểm mạnh nhất:',
+            $this->formatLines($evaluation->strengths ?? []),
+            '',
+            'Cần cải thiện:',
+            $this->formatLines($evaluation->improvements ?? []),
+            '',
+            'Lỗi mất điểm nhiều nhất: '.($evaluation->critical_error ?: '—'),
+            '',
+            'SPEAKER DIAGNOSIS',
+            'Content: '.data_get($diagnosis, 'content', '—'),
+            'Strategy: '.data_get($diagnosis, 'strategy', '—'),
+            'Delivery: '.data_get($diagnosis, 'delivery', '—'),
+            'Rebuttal: '.data_get($diagnosis, 'rebuttal', '—'),
+            'Level: '.data_get($diagnosis, 'level', '—'),
+            '',
+            'COACHING PLAN',
+            'Tuần 1-2 (CREL): '.(data_get($coachingPlan, 'week_1_2') ?: '—'),
+            'Tuần 3 (Đối chiếu): '.(data_get($coachingPlan, 'week_3') ?: '—'),
+            'Tuần 4 (Thẻ dàn ý): '.(data_get($coachingPlan, 'week_4') ?: '—'),
+        ]);
+
+        $filename = (preg_replace('/[^A-Za-z0-9._-]+/', '_', $submission->title) ?: 'submission').'_grading.txt';
+
+        return response(implode("\n", $lines), 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     /** Kích hoạt Gemini chấm lại bài nộp này từ đầu. */
@@ -115,5 +183,10 @@ class SubmissionController extends Controller
             ->filter()
             ->values()
             ->all();
+    }
+
+    private function formatLines(array $items): string
+    {
+        return $items === [] ? '—' : '- '.implode("\n- ", $items);
     }
 }

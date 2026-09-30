@@ -23,7 +23,7 @@ class StoreSubmissionRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'youtube_url' => [
                 'required', 'url', 'max:255',
-                'regex:/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i',
+                'regex:/^https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]+(?:[?&][^\s]*)?$/i',
             ],
         ];
     }
