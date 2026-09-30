@@ -41,21 +41,11 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .navbar-debeat .brand-mark {
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, var(--primary), var(--mint));
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .navbar-debeat .brand-name {
-            font-weight: 700;
-            letter-spacing: -0.01em;
+        .navbar-debeat .brand-logo {
+            display: block;
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
         }
 
         .card-soft {
@@ -145,8 +135,7 @@
     <nav class="navbar navbar-debeat py-3 mb-4">
         <div class="container d-flex align-items-center justify-content-between">
             <a href="{{ route('public.submissions.create') }}" class="d-flex align-items-center text-decoration-none gap-2">
-                <span class="brand-mark"><i class="bi bi-mic-fill"></i></span>
-                <span class="brand-name text-dark">DeBeat</span>
+                <img src="{{ asset('assets/images/logo.jpeg') }}" alt="Nhà Bim Mộc" class="brand-logo">
             </a>
             <div class="d-flex gap-2">
                 <a href="{{ route('public.submissions.create') }}" class="btn btn-outline-soft btn-sm">

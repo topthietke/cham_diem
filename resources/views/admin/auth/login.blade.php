@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Đăng nhập Admin · DeBeat</title>
+    <title>Đăng nhập Admin · Nhà Bim Mộc</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Inter', system-ui, sans-serif; background: #F6F6FC; min-height: 100vh; display: flex; align-items: center; }
         .login-card { max-width: 420px; margin: auto; background: #fff; border: 1px solid #E7E5F5; border-radius: 20px; box-shadow: 0 10px 30px rgba(108,99,255,.08); }
+        .login-logo { display: block; width: 140px; height: 140px; object-fit: contain; margin: 0 auto 1rem; }
         .form-control { border-radius: 10px; border: 1.5px solid #E7E5F5; padding: .6rem .9rem; }
         .btn-primary-soft { background: #6C63FF; border-color: #6C63FF; border-radius: 10px; font-weight: 600; }
         .btn-primary-soft:hover { background: #564FD1; border-color: #564FD1; }
@@ -17,7 +18,8 @@
 <body>
     <div class="container">
         <div class="login-card p-4 p-md-5">
-            <h1 class="h4 fw-bold text-center mb-1">DeBeat Admin</h1>
+            <img src="{{ asset('assets/images/logo.jpeg') }}" alt="Nhà Bim Mộc" class="login-logo">
+            <h1 class="h4 fw-bold text-center mb-1">Đăng nhập Admin</h1>
             <p class="text-center text-muted mb-4">Đăng nhập để quản lý hệ thống chấm bài</p>
 
             @if ($errors->any())

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Quản trị') · DeBeat Admin</title>
+    <title>@yield('title', 'Quản trị') · Nhà Bim Mộc Admin</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -22,7 +22,8 @@
             min-height: 100vh; position: fixed; top: 0; left: 0; padding: 1.5rem 1rem;
         }
         .admin-content { margin-left: 240px; padding: 2rem; }
-        .admin-sidebar .brand { font-weight: 700; font-size: 1.05rem; margin-bottom: 2rem; display: block; }
+        .admin-sidebar .brand { display: block; margin-bottom: 2rem; text-align: center; }
+        .admin-sidebar .brand-logo { display: block; width: min(100%, 150px); height: auto; margin: 0 auto; }
         .admin-nav-link {
             display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.9rem; border-radius: 10px;
             color: var(--text-muted); font-weight: 600; font-size: 0.92rem; text-decoration: none; margin-bottom: 0.2rem;
@@ -51,7 +52,7 @@
 <body>
     <aside class="admin-sidebar">
         <a href="{{ route('admin.dashboard') }}" class="brand text-dark text-decoration-none">
-            <i class="bi bi-mic-fill me-1"></i>DeBeat Admin
+            <img src="{{ asset('assets/images/logo.jpeg') }}" alt="Nhà Bim Mộc" class="brand-logo">
         </a>
         <nav>
             <a href="{{ route('admin.dashboard') }}" class="admin-nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
